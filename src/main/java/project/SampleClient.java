@@ -1,3 +1,5 @@
+package project;
+
 import java.net.*;
 import java.io.*;
 import java.nio.*;
@@ -40,11 +42,11 @@ public class SampleClient {
 			}
 		}
 		catch (ConnectException e) {
-    			System.err.println("Connection refused. You need to initiate a server first.");
+			System.err.println("Connection refused. You need to initiate a server first.");
 		} 
 		catch ( ClassNotFoundException e ) {
-            		System.err.println("Class not found");
-        	} 
+			System.err.println("Class not found");
+		}
 		catch(UnknownHostException unknownHost){
 			System.err.println("You are trying to connect to an unknown host!");
 		}
@@ -63,6 +65,7 @@ public class SampleClient {
 			}
 		}
 	}
+
 	//send a message to the output stream
 	void sendMessage(String msg)
 	{
@@ -75,6 +78,7 @@ public class SampleClient {
 			ioException.printStackTrace();
 		}
 	}
+
 	//main method
 	public static void main(String args[])
 	{
