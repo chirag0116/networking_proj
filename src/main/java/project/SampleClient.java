@@ -28,7 +28,7 @@ public class SampleClient {
 			
 			//get Input from standard input
 			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
-			while(true)
+			while(bufferedReader.ready())	// assuming this means there are more lines to be read
 			{
 				System.out.print("Hello, please input a sentence: ");
 				//read a sentence from the standard input
