@@ -23,7 +23,7 @@ public class Peer {
     // Size of a piece in bytes
     private int piecesize;
 
-    // Peers of the current peers
+    // Peers of the current peer
     private ArrayList<PeerConfiguration> peers;
 
     public void Peer(String commonConfigPath, String peerConfigPath) throws FileNotFoundException, ParseException, IOException {
