@@ -32,6 +32,8 @@ public class MessageFactory {
                 msg = new UnchokeMessage(peer);
                 break;
             case 2:
+                msg = new InterestedMessage(peer);
+                break;
             case 3:
             case 4:
             case 5:
