@@ -2,8 +2,6 @@ package project;
 
 public class UnchokeMessage extends Message {
 
-    private static final byte TYPE = 1;
-
     /**
      * Construct an UnchokeMessage with a specified
      * sender. Should be used when receiving messages.
@@ -15,9 +13,8 @@ public class UnchokeMessage extends Message {
     }
 
     @Override
-    protected String getTypeBytes() {
-        byte[] bytes = {TYPE};
-        return new String(bytes);
+    protected byte getType() {
+        return 1;
     }
 
     @Override

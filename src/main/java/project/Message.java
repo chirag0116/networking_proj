@@ -31,10 +31,15 @@ public abstract class Message {
         return new String(bytes);
     }
 
+    protected String getTypeBytes() {
+        byte[] bytes = {getType()};
+        return new String(bytes);
+    }
+
     /*
      * Abstract methods used by Message::serialize
      */
-    protected abstract String getTypeBytes();
+
     protected abstract String getPayloadBytes();
 
     /**
@@ -43,6 +48,13 @@ public abstract class Message {
      * @return length of the message, once serialized
      */
     protected abstract int getLength();
+
+    /**
+     * Returns the byte value of the
+     * message type (constant in sub-class)
+     * @return type as a byte
+     */
+    protected abstract byte getType();
 
     /**
      * Returns the peer member,

@@ -2,8 +2,6 @@ package project;
 
 public class ChokeMessage extends Message {
 
-    private static final byte TYPE = 0;
-
     /**
      * Construct a ChokeMessage with a specified
      * sender. Should be used when receiving messages.
@@ -15,9 +13,8 @@ public class ChokeMessage extends Message {
     }
 
     @Override
-    protected String getTypeBytes() {
-        byte[] bytes = {TYPE};
-        return new String(bytes);
+    protected byte getType() {
+        return 0;
     }
 
     @Override
