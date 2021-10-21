@@ -48,6 +48,14 @@ public class MessageFactory {
                 break;
             case 5:
             case 6:
+                if (payload.size() != 4) {
+                    throw new IllegalArgumentException("Invalid payload size for RequestMessage");
+                }
+                else {
+                    int index = intFromBytes(payload);
+                    msg = new RequestMessage(index, peer);
+                }
+                break;
             case 7:
                 /* TODO -- Add construction of each Message type
                  * msg = MessageSubClass(params);

@@ -173,6 +173,40 @@ public class MessageTests {
     }
 
     @Test
+    void testRequestMessageEquals() {
+        RequestMessage m1 = new RequestMessage(1, PEER1);
+        RequestMessage m2 = new RequestMessage(1, PEER1);
+        RequestMessage m3 = new RequestMessage(1, PEER2);
+        RequestMessage m4 = new RequestMessage(2, PEER1);
+        Assertions.assertEquals(m1,m2);
+        Assertions.assertNotEquals(m1,m3);
+        Assertions.assertNotEquals(m1,m4);
+        Assertions.assertNotEquals(m3,m4);
+    }
+
+    @Test
+    void testMessageFactoryRequestMessage() {
+        byte[] bytes = {0,0,0,9,6,0,0,0,1};
+        Message received = messageFromBytes(bytes, PEER1);
+        RequestMessage expected = new RequestMessage(1, PEER1);
+        Assertions.assertTrue(received instanceof RequestMessage);
+        Assertions.assertEquals(expected, received);
+    }
+
+    @Test
+    void testRequestMessageSerialization() {
+        byte[] bytes = {0,0,0,9,6,0,0,0,1};
+        String expected = new String(bytes);
+        RequestMessage msg = new RequestMessage(1, PEER1);
+        String received = msg.serialize();
+        Assertions.assertEquals(expected,received);
+
+        MessageFactory factory = new MessageFactory();
+        Message expectedMsg = factory.makeMessage(received, PEER1);
+        Assertions.assertEquals(msg,expectedMsg);
+    }
+
+    @Test
     void testMessageFactoryInvalidType() {
         byte[] bytes = {0,0,0,5,12};
         String raw = new String(bytes);
