@@ -108,6 +108,37 @@ public class MessageTests {
     }
 
     @Test
+    void testUninterestedMessageEquals() {
+        UninterestedMessage m1 = new UninterestedMessage(PEER1);
+        UninterestedMessage m2 = new UninterestedMessage(PEER1);
+        UninterestedMessage m3 = new UninterestedMessage(PEER2);
+        Assertions.assertEquals(m1,m2);
+        Assertions.assertNotEquals(m1,m3);
+    }
+
+    @Test
+    void testMessageFactoryUninterestedMessage() {
+        byte[] bytes = {0,0,0,5,3};
+        Message received = messageFromBytes(bytes, PEER1);
+        UninterestedMessage expected = new UninterestedMessage(PEER1);
+        Assertions.assertTrue(received instanceof UninterestedMessage);
+        Assertions.assertEquals(expected, received);
+    }
+
+    @Test
+    void testUninterestedMessageSerialization() {
+        byte[] bytes = {0,0,0,5,3};
+        String expected = new String(bytes);
+        UninterestedMessage msg = new UninterestedMessage(PEER1);
+        String received = msg.serialize();
+        Assertions.assertEquals(expected,received);
+
+        MessageFactory factory = new MessageFactory();
+        Message expectedMsg = factory.makeMessage(received, PEER1);
+        Assertions.assertEquals(msg,expectedMsg);
+    }
+
+    @Test
     void testMessageFactoryInvalidType() {
         byte[] bytes = {0,0,0,5,12};
         String raw = new String(bytes);

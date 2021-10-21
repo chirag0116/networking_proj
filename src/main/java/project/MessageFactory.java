@@ -35,6 +35,8 @@ public class MessageFactory {
                 msg = new InterestedMessage(peer);
                 break;
             case 3:
+                msg = new UninterestedMessage(peer);
+                break;
             case 4:
             case 5:
             case 6:
