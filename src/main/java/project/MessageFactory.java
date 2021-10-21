@@ -57,10 +57,19 @@ public class MessageFactory {
                 }
                 break;
             case 7:
-                /* TODO -- Add construction of each Message type
-                 * msg = MessageSubClass(params);
-                 * break;
-                 */
+                if (payload.size() < 4) {
+                    throw new IllegalArgumentException("Invalid payload size for PieceMessage");
+                }
+                else {
+                    int index = intFromBytes(payload.subList(0,4));
+                    List<Byte> pieceList = payload.subList(4, payload.size());
+                    byte[] piece = new byte[pieceList.size()];
+                    for (int i = 0; i < pieceList.size(); i++) {
+                        piece[i] = pieceList.get(i);
+                    }
+                    msg = new PieceMessage(index, piece, peer);
+                }
+                break;
             default:
                 throw new IllegalArgumentException("Unexpected message type in raw message");
         }

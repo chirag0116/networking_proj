@@ -207,6 +207,44 @@ public class MessageTests {
     }
 
     @Test
+    void testPieceMessageEquals() {
+        byte[] p1 = {0,0,0,0,0,0,0,1};
+        byte[] p2 = {0,0,0,0,0,0,0,2};
+        PieceMessage m1 = new PieceMessage(1, p1, PEER1);
+        PieceMessage m2 = new PieceMessage(1, p1, PEER1);
+        PieceMessage m3 = new PieceMessage(2, p1, PEER1);
+        PieceMessage m4 = new PieceMessage(1, p2, PEER1);
+        PieceMessage m5 = new PieceMessage(1, p1, PEER2);
+        Assertions.assertEquals(m1,m2);
+        Assertions.assertNotEquals(m1,m3);
+        Assertions.assertNotEquals(m1,m4);
+        Assertions.assertNotEquals(m1,m5);
+    }
+
+    @Test
+    void testMessageFactoryPieceMessage() {
+        byte[] bytes = {0,0,0,17,7,0,0,0,1,0,0,0,0,0,0,0,1};
+        byte[] piece = {0,0,0,0,0,0,0,1};
+        Message received = messageFromBytes(bytes, PEER1);
+        PieceMessage expected = new PieceMessage(1, piece, PEER1);
+        Assertions.assertTrue(received instanceof PieceMessage);
+        Assertions.assertEquals(expected, received);
+    }
+
+    @Test
+    void testPieceMessageSerialization() {
+        byte[] bytes = {0,0,0,17,7,0,0,0,1,0,0,0,0,0,0,0,1};
+        byte[] piece = {0,0,0,0,0,0,0,1};
+        PieceMessage expectedObj = new PieceMessage(1, piece, PEER1);
+        String expectedMsg = new String(bytes);
+        Assertions.assertEquals(expectedObj.serialize(), expectedMsg);
+
+        MessageFactory factory = new MessageFactory();
+        Message receivedObj = factory.makeMessage(expectedObj.serialize(), PEER1);
+        Assertions.assertEquals(receivedObj, expectedObj);
+    }
+
+    @Test
     void testMessageFactoryInvalidType() {
         byte[] bytes = {0,0,0,5,12};
         String raw = new String(bytes);
