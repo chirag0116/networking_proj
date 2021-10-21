@@ -66,4 +66,25 @@ public abstract class Message {
         return peer;
     }
 
+    /**
+     * This is simple implementation of equals
+     * for Messages. Subclasses may need to
+     * override it.
+     * @param obj - the other object
+     * @return whether obj is equal to this
+     */
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        else if (obj.getClass() != this.getClass()) {
+            return false;
+        }
+
+        Message other = (Message) obj;
+        // Length and Type are equal since types are equal
+        return this.peer.equals(other.getPeer()) && this.serialize().equals(other.serialize());
+    }
+
 }

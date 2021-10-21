@@ -21,18 +21,4 @@ public class InterestedMessage extends Message {
         return 5; // 4 length bytes + 1 type byte
     }
 
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == null) {
-            return false;
-        }
-        else if (obj.getClass() != this.getClass()) {
-            return false;
-        }
-
-        final InterestedMessage other = (InterestedMessage) obj;
-        // Length and Type are equal since types are equal
-        return this.peer.equals(other.getPeer());
-
-    }
 }
