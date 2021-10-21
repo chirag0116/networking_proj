@@ -29,6 +29,8 @@ public class MessageFactory {
                 msg = new ChokeMessage(peer);
                 break;
             case 1:
+                msg = new UnchokeMessage(peer);
+                break;
             case 2:
             case 3:
             case 4:
