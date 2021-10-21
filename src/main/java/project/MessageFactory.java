@@ -12,7 +12,7 @@ public class MessageFactory {
         // TODO - Verify this is the correct charset with tests
         List<Byte> bytes = getByteList(rawMsg);
 
-        int length = lengthFromBytes(bytes.subList(0,4));
+        int length = intFromBytes(bytes.subList(0,4));
         if (rawMsg.length() != length) {
             throw new IllegalArgumentException("Length field does not match string received by MessageFactory");
         }
@@ -20,7 +20,7 @@ public class MessageFactory {
         byte type = bytes.get(4);
         List<Byte> payload = Arrays.asList();
         if (bytes.size() > 5) {
-            payload = bytes.subList(5,bytes.size() - 1);
+            payload = bytes.subList(5,bytes.size());
         }
 
         Message msg = null;
@@ -38,6 +38,14 @@ public class MessageFactory {
                 msg = new UninterestedMessage(peer);
                 break;
             case 4:
+                if (payload.size() != 4) {
+                    throw new IllegalArgumentException("Invalid payload size for HaveMessage");
+                }
+                else {
+                    int index = intFromBytes(payload);
+                    msg = new HaveMessage(index, peer);
+                }
+                break;
             case 5:
             case 6:
             case 7:
@@ -62,13 +70,13 @@ public class MessageFactory {
 
     /**
      * Computes length (int) from list of 4 bytes
-     * @param lengthBytes - 4 byte list capturing bytes of the int
-     * @return length as an int
+     * @param byteList - 4 byte list capturing bytes of the int
+     * @return int represented by bytes
      */
-    private int lengthFromBytes(List<Byte> lengthBytes) {
-        byte[] bytes = new byte[lengthBytes.size()];
-        for (int i = 0; i < lengthBytes.size(); i++) {
-            bytes[i] = lengthBytes.get(i);
+    private int intFromBytes(List<Byte> byteList) {
+        byte[] bytes = new byte[byteList.size()];
+        for (int i = 0; i < byteList.size(); i++) {
+            bytes[i] = byteList.get(i);
         }
         ByteBuffer buf = ByteBuffer.wrap(bytes);
         return buf.getInt();

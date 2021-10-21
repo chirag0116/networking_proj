@@ -139,6 +139,40 @@ public class MessageTests {
     }
 
     @Test
+    void testHaveMessageEquals() {
+        HaveMessage m1 = new HaveMessage(1, PEER1);
+        HaveMessage m2 = new HaveMessage(1, PEER1);
+        HaveMessage m3 = new HaveMessage(1, PEER2);
+        HaveMessage m4 = new HaveMessage(2, PEER1);
+        Assertions.assertEquals(m1,m2);
+        Assertions.assertNotEquals(m1,m3);
+        Assertions.assertNotEquals(m1,m4);
+        Assertions.assertNotEquals(m3,m4);
+    }
+
+    @Test
+    void testMessageFactoryHaveMessage() {
+        byte[] bytes = {0,0,0,9,4,0,0,0,1};
+        Message received = messageFromBytes(bytes, PEER1);
+        HaveMessage expected = new HaveMessage(1, PEER1);
+        Assertions.assertTrue(received instanceof HaveMessage);
+        Assertions.assertEquals(expected, received);
+    }
+
+    @Test
+    void testHaveMessageSerialization() {
+        byte[] bytes = {0,0,0,9,4,0,0,0,1};
+        String expected = new String(bytes);
+        HaveMessage msg = new HaveMessage(1, PEER1);
+        String received = msg.serialize();
+        Assertions.assertEquals(expected,received);
+
+        MessageFactory factory = new MessageFactory();
+        Message expectedMsg = factory.makeMessage(received, PEER1);
+        Assertions.assertEquals(msg,expectedMsg);
+    }
+
+    @Test
     void testMessageFactoryInvalidType() {
         byte[] bytes = {0,0,0,5,12};
         String raw = new String(bytes);
