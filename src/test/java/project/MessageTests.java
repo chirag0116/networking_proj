@@ -42,6 +42,33 @@ public class MessageTests {
     }
 
     @Test
+    void testUnchokeMessageEquals() {
+        UnchokeMessage m1 = new UnchokeMessage(PEER1);
+        UnchokeMessage m2 = new UnchokeMessage(PEER1);
+        UnchokeMessage m3 = new UnchokeMessage(PEER2);
+        Assertions.assertEquals(m1,m2);
+        Assertions.assertNotEquals(m1,m3);
+    }
+
+    @Test
+    void testMessageFactoryUnchokeMessage() {
+        byte[] bytes = {0,0,0,5,1};
+        Message received = messageFromBytes(bytes, PEER1);
+        UnchokeMessage expected = new UnchokeMessage(PEER1);
+        Assertions.assertTrue(received instanceof UnchokeMessage);
+        Assertions.assertEquals(expected, received);
+    }
+
+    @Test
+    void testUnchokeMessageSerialization() {
+        byte[] bytes = {0,0,0,5,1};
+        String expected = new String(bytes);
+        UnchokeMessage msg = new UnchokeMessage(PEER1);
+        String received = msg.serialize();
+        Assertions.assertEquals(expected,received);
+    }
+
+    @Test
     void testMessageFactoryInvalidType() {
         byte[] bytes = {0,0,0,5,12};
         String raw = new String(bytes);
