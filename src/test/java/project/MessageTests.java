@@ -39,6 +39,10 @@ public class MessageTests {
         ChokeMessage msg = new ChokeMessage(PEER1);
         String received = msg.serialize();
         Assertions.assertEquals(expected,received);
+
+        MessageFactory factory = new MessageFactory();
+        Message expectedMsg = factory.makeMessage(received, PEER1);
+        Assertions.assertEquals(msg,expectedMsg);
     }
 
     @Test
@@ -66,6 +70,10 @@ public class MessageTests {
         UnchokeMessage msg = new UnchokeMessage(PEER1);
         String received = msg.serialize();
         Assertions.assertEquals(expected,received);
+
+        MessageFactory factory = new MessageFactory();
+        Message expectedMsg = factory.makeMessage(received, PEER1);
+        Assertions.assertEquals(msg,expectedMsg);
     }
 
     @Test
@@ -93,6 +101,10 @@ public class MessageTests {
         InterestedMessage msg = new InterestedMessage(PEER1);
         String received = msg.serialize();
         Assertions.assertEquals(expected,received);
+
+        MessageFactory factory = new MessageFactory();
+        Message expectedMsg = factory.makeMessage(received, PEER1);
+        Assertions.assertEquals(msg,expectedMsg);
     }
 
     @Test
