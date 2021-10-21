@@ -47,6 +47,23 @@ public class PeerConfiguration {
         this.hasFile = hasFile;
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        else if (obj.getClass() != this.getClass()) {
+            return false;
+        }
+
+        PeerConfiguration other = (PeerConfiguration) obj;
+
+        return other.getId() == this.id &&
+                other.getPort() == this.port &&
+                other.getHostname().equals(this.hostname) &&
+                other.hasFile == this.hasFile();
+    }
+
     public static ArrayList<PeerConfiguration> loadPeerConfigurations(String configFilePath)
         throws FileNotFoundException, IOException, ParseException {
         ArrayList<PeerConfiguration> peers = new ArrayList<PeerConfiguration>();
