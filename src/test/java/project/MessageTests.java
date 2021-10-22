@@ -9,7 +9,7 @@ public class MessageTests {
     private static final PeerConfiguration PEER2 = new PeerConfiguration(1012, "lin114-01.cise.ufl.edu",6008,false);
 
     private Message messageFromBytes(byte[] bytes, PeerConfiguration peer) {
-        String raw = new String(bytes);
+        String raw = StringEncoder.bytesToString(bytes);
         MessageFactory factory = new MessageFactory();
         return factory.makeMessage(raw, peer);
     }
@@ -242,6 +242,74 @@ public class MessageTests {
         MessageFactory factory = new MessageFactory();
         Message receivedObj = factory.makeMessage(expectedObj.serialize(), PEER1);
         Assertions.assertEquals(receivedObj, expectedObj);
+    }
+
+    @Test
+    void testBitfieldMessageEquals() {
+        byte[] bitfield1 = {1,1};
+        byte[] bitfield2 = {0,1};
+        BitfieldMessage m1 = new BitfieldMessage(bitfield1, PEER1);
+        BitfieldMessage m2 = new BitfieldMessage(bitfield1, PEER1);
+        BitfieldMessage m3 = new BitfieldMessage(bitfield2, PEER1);
+        BitfieldMessage m4 = new BitfieldMessage(bitfield1, PEER2);
+
+        Assertions.assertEquals(m1,m2);
+        Assertions.assertNotEquals(m1,m3);
+        Assertions.assertNotEquals(m1,m4);
+    }
+
+    @Test
+    void testBitfieldMessageBooleanEncoding() {
+        // Test just positive bytes
+        byte[] bitfield = {1,4}; // 0th bit and 10th bit
+        boolean[] boolBitfield = new boolean[13]; // Pick an intermediate value
+        boolBitfield[0] = true;
+        boolBitfield[10] = true;
+        BitfieldMessage m1 = new BitfieldMessage(bitfield, PEER1);
+        BitfieldMessage m2 = new BitfieldMessage(boolBitfield, PEER1);
+        Assertions.assertEquals(m1,m2);
+
+        // Test positive and negative bytes
+        bitfield[0] = (byte) 255; // Force the MSB of the 1st byte to 1
+        boolBitfield[0] = false; // Flip this back to zero
+        boolBitfield[7] = true; // Set MSB index to 1
+        m1 = new BitfieldMessage(bitfield, PEER1);
+        m2 = new BitfieldMessage(bitfield, PEER1);
+        Assertions.assertEquals(m1,m2);
+    }
+
+    @Test
+    void testBitfieldMessageHasPiece() {
+        byte[] bitfield = {1,4}; // 0th bit and 10th bit
+        BitfieldMessage m1 = new BitfieldMessage(bitfield, PEER1);
+        Assertions.assertTrue(m1.hasPiece(0));
+        Assertions.assertTrue(m1.hasPiece(10));
+
+        bitfield[0] = (byte) 255; // Force the MSB of the 1st byte to 1
+        bitfield[1] = (byte) 255; // Force the MSB of the 1st byte to 1
+        m1 = new BitfieldMessage(bitfield, PEER1);
+        Assertions.assertTrue(m1.hasPiece(7));
+        Assertions.assertTrue(m1.hasPiece(15));
+    }
+
+    @Test
+    void testMessageFactoryBitfieldMessage() {
+        byte[] bytes = {0,0,0,7,5,4,(byte)255};
+        byte[] bitfield = {4, (byte)255};
+        Message received = messageFromBytes(bytes, PEER1);
+        BitfieldMessage expected = new BitfieldMessage(bitfield, PEER1);
+        Assertions.assertTrue(received instanceof BitfieldMessage);
+        Assertions.assertEquals(expected, received);
+    }
+
+    @Test
+    void testBitfieldMessageSerialization() {
+        byte[] bytes = {0,0,0,7,5,4,(byte)255};
+        byte[] bitfield = {4, (byte)255};
+        Message received = new BitfieldMessage(bitfield, PEER1);
+        String expectedMsg = StringEncoder.bytesToString(bytes);
+        String receivedMsg = received.serialize();
+        Assertions.assertEquals(receivedMsg, expectedMsg);
     }
 
     @Test

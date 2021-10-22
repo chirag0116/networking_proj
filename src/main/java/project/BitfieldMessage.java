@@ -7,25 +7,46 @@ public class BitfieldMessage extends Message {
     /*
      * The serialized BitfieldMessage has the
      * ownership status encoded *within* bytes.
-     * Instead of storing the in-byte encoding,
-     * the BitFieldMessage class stores am equivalent
-     * boolean array.
-     * The array is as follows:
-     * bitfield[i] == true -> the sender has the ith piece
+     * ith bit == 1 -> the sender has the ith piece
      */
-    boolean[] bitfield;
+    byte[] bitfield;
 
+    /**
+     * Constructor which accepts a boolean array
+     * which is encoded into the bitfield (byte array).
+     * Used for construction by Peer class when creating
+     * bitfield messages for sending to server.
+     * @param bitfield - boolean array which is encoded into bitfield
+     * @param peer - the sender or intended receiver (context dependent)
+     */
     BitfieldMessage(boolean[] bitfield, PeerConfiguration peer) {
+        this.peer = peer;
+        this.bitfield = bitfieldFromBooleanArray(bitfield);
+    }
+
+    /**
+     * Constructor which accepts bitfield
+     * (byte array) directly. Used by MessageFactory
+     * for constructing BitfieldMessage objects from raw
+     * bytes off TCP
+     * @param bitfield - byte array which is the bitfield
+     * @param peer- the sender or intended receiver (context dependent)
+     */
+    BitfieldMessage(byte[] bitfield, PeerConfiguration peer) {
         this.peer = peer;
         this.bitfield = bitfield;
     }
 
     boolean hasPiece(int index) {
-        return bitfield[index];
-    }
-
-    boolean[] getBitfield() {
-        return bitfield;
+        if (index > bitfield.length * 8 || index < 0) {
+            throw new IndexOutOfBoundsException("Invalid bit index in bitfield");
+        }
+        int arrIndex = index / 8;
+        int bitIndex = index % 8;
+        byte b = bitfield[arrIndex];
+        // This LHS will be all zeroes only when the
+        // specified bit is 1
+        return ~(b | ~(1 << bitIndex)) == 0;
     }
 
     @Override
@@ -35,17 +56,30 @@ public class BitfieldMessage extends Message {
 
     @Override
     protected String getPayloadBytes() {
-        int neededBytes = (bitfield.length % 8 == 0) ? bitfield.length/8 : bitfield.length/8 + 1;
+        return StringEncoder.bytesToString(bitfield);
+    }
+
+    /**
+     * Encodes a boolean array into bytes
+     * such that:
+     * arr[i] == true -> ith bit in byte[] == 1
+     * The returned byte[] will be padded with
+     * extra bits to contain an integer number of bytes
+     * @param arr - array of booleans
+     * @return array of bytes where the ith bit is 1 if arr[i] is 1
+     */
+    private byte[] bitfieldFromBooleanArray(boolean[] arr) {
+        int neededBytes = (arr.length % 8 == 0) ? arr.length/8 : arr.length/8 + 1;
         byte[] bytes = new byte[neededBytes];
-        for (int i = 0; i < bitfield.length; i++) {
-            if (bitfield[i]) {
+        for (int i = 0; i < arr.length; i++) {
+            if (arr[i]) {
                 int arrayIdx = i / 8;
-                int bitIdx =  i % 8;
-                byte modified = setBit(bytes[arrayIdx], bitIdx);
+                int bitIdx = i % 8;
+                byte modified = setBit(bytes[arrayIdx], (byte)bitIdx);
                 bytes[arrayIdx] = modified;
             }
         }
-        return new String(bytes);
+        return bytes;
     }
 
     /**
@@ -54,7 +88,7 @@ public class BitfieldMessage extends Message {
      * @param i - index of the bit to be set (0-7)
      * @return b with the ith bit set to 1
      */
-    private byte setBit(byte b, int i) {
+    private byte setBit(byte b, byte i) {
         if (i < 0 || i > 7) {
             throw new IllegalArgumentException("Invalid byte index");
         }
@@ -63,15 +97,6 @@ public class BitfieldMessage extends Message {
 
     @Override
     protected int getLength() {
-        // 4 length bytes + 1 type byte + X bitfield bytes
-        // X = (# of pieces)/8 if # of pieces fits neatly into bytes
-        // X = (# of pieces)/8 + 1 if there are trailing extra bits
-        int numPieces = bitfield.length;
-        if (numPieces % 8 == 0) {
-            return 5 + numPieces/8;
-        }
-        else {
-            return 5 + numPieces/8 + 1; // Round up
-        }
+        return 5 + bitfield.length;
     }
 }
