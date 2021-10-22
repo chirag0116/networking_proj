@@ -87,4 +87,10 @@ public abstract class Message {
         return this.peer.equals(other.getPeer()) && this.serialize().equals(other.serialize());
     }
 
+    @Override
+    public String toString() {
+        return this.serialize();
+    }
+
+
 }
