@@ -1,7 +1,5 @@
 package project;
 
-import sun.text.bidi.BidiLine;
-
 public class PeerInfo {
     private String id;
     private String ip;
