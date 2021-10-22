@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="project.PeerConfigurationTests" tests="2" skipped="0" failures="0" errors="0" timestamp="2021-09-27T21:11:02" hostname="MSI" time="0.027">
-  <properties/>
-  <testcase name="testInvalidPath()" classname="project.PeerConfigurationTests" time="0.023"/>
-  <testcase name="testLoadPeers()" classname="project.PeerConfigurationTests" time="0.003"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

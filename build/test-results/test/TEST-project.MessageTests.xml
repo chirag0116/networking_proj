@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="project.MessageTests" tests="28" skipped="0" failures="0" errors="0" timestamp="2021-10-22T15:47:11" hostname="DESKTOP-N2QIA24" time="0.042">
+  <properties/>
+  <testcase name="testMessageFactoryInvalidType()" classname="project.MessageTests" time="0.019"/>
+  <testcase name="testChokeMessageEquals()" classname="project.MessageTests" time="0.002"/>
+  <testcase name="testUnchokeMessageSerialization()" classname="project.MessageTests" time="0.0"/>
+  <testcase name="testMessageFactoryPieceMessage()" classname="project.MessageTests" time="0.0"/>
+  <testcase name="testBitfieldMessageHasPiece()" classname="project.MessageTests" time="0.0"/>
+  <testcase name="testPieceMessageSerialization()" classname="project.MessageTests" time="0.0"/>
+  <testcase name="testMessageFactoryHaveMessage()" classname="project.MessageTests" time="0.001"/>
+  <testcase name="testMessageFactoryUnchokeMessage()" classname="project.MessageTests" time="0.0"/>
+  <testcase name="testMessageFactoryInterestedMessage()" classname="project.MessageTests" time="0.0"/>
+  <testcase name="testUninterestedMessageEquals()" classname="project.MessageTests" time="0.001"/>
+  <testcase name="testMessageFactoryChokeMessage()" classname="project.MessageTests" time="0.0"/>
+  <testcase name="testUnchokeMessageEquals()" classname="project.MessageTests" time="0.0"/>
+  <testcase name="testBitfieldMessageSerialization()" classname="project.MessageTests" time="0.001"/>
+  <testcase name="testHaveMessageSerialization()" classname="project.MessageTests" time="0.0"/>
+  <testcase name="testMessageFactoryRequestMessage()" classname="project.MessageTests" time="0.001"/>
+  <testcase name="testRequestMessageSerialization()" classname="project.MessageTests" time="0.0"/>
+  <testcase name="testInterestedMessageSerialization()" classname="project.MessageTests" time="0.0"/>
+  <testcase name="testHaveMessageEquals()" classname="project.MessageTests" time="0.0"/>
+  <testcase name="testUninterestedMessageSerialization()" classname="project.MessageTests" time="0.001"/>
+  <testcase name="testRequestMessageEquals()" classname="project.MessageTests" time="0.0"/>
+  <testcase name="testChokeMessageSerialization()" classname="project.MessageTests" time="0.0"/>
+  <testcase name="testPieceMessageEquals()" classname="project.MessageTests" time="0.0"/>
+  <testcase name="testBitfieldMessageBooleanEncoding()" classname="project.MessageTests" time="0.0"/>
+  <testcase name="testMessageFactoryUninterestedMessage()" classname="project.MessageTests" time="0.001"/>
+  <testcase name="testBitfieldMessageEquals()" classname="project.MessageTests" time="0.001"/>
+  <testcase name="testInterestedMessageEquals()" classname="project.MessageTests" time="0.0"/>
+  <testcase name="testMessageFactoryBitfieldMessage()" classname="project.MessageTests" time="0.0"/>
+  <testcase name="testMessageFactoryInvalidLength()" classname="project.MessageTests" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
