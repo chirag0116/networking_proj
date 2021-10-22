@@ -47,6 +47,17 @@ public class MessageFactory {
                 }
                 break;
             case 5:
+                if (payload.isEmpty()) {
+                    throw new IllegalArgumentException("Empty payload in BitfieldMessage");
+                }
+                else {
+                    byte[] bitfield = new byte[payload.size()];
+                    for (int i = 0; i < payload.size(); i++) {
+                        bitfield[i] = payload.get(i);
+                    }
+                    msg = new BitfieldMessage(bitfield, peer);
+                }
+                break;
             case 6:
                 if (payload.size() != 4) {
                     throw new IllegalArgumentException("Invalid payload size for RequestMessage");
@@ -77,7 +88,7 @@ public class MessageFactory {
     }
 
     private List<Byte> getByteList(String s) {
-        byte[] byteArray = s.getBytes(StandardCharsets.US_ASCII);
+        byte[] byteArray = StringEncoder.stringToBytes(s);
         List<Byte> bytes = new ArrayList<>();
         for (byte b : byteArray) {
             bytes.add(b);

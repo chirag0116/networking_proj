@@ -30,7 +30,7 @@ public class HaveMessage extends Message {
     @Override
     protected String getPayloadBytes() {
         byte[] bytes = ByteBuffer.allocate(4).putInt(index).array();
-        return new String(bytes);
+        return StringEncoder.bytesToString(bytes);
     }
 
     @Override

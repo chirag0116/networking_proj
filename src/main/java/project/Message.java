@@ -28,12 +28,12 @@ public abstract class Message {
 
     protected String getLengthBytes() {
         byte[] bytes = ByteBuffer.allocate(4).putInt(getLength()).array();
-        return new String(bytes);
+        return StringEncoder.bytesToString(bytes);
     }
 
     protected String getTypeBytes() {
         byte[] bytes = {getType()};
-        return new String(bytes);
+        return StringEncoder.bytesToString(bytes);
     }
 
     /*

@@ -39,7 +39,7 @@ public class PieceMessage extends Message {
         byte[] bytes = new byte[indexBytes.length+piece.length];
         System.arraycopy(indexBytes, 0, bytes, 0, indexBytes.length);
         System.arraycopy(piece, 0, bytes, 4, piece.length);
-        return new String(bytes);
+        return StringEncoder.bytesToString(bytes);
     }
 
     @Override
