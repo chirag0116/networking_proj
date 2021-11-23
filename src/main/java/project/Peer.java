@@ -12,18 +12,12 @@ public class Peer {
     /*
      * Common Configuration Information
      */
-    // The number of neighbors which are preferred
-    private int numberPreferredNeighbors;
-    // Unchoking Interval
-    private int unchoke;
-    // Optimistic Unchoking Interval
-    private int optimisticUnchoke;
-    // Name of the file desired by the peer
-    private String filename;
-    // Size of the desired file in bytes
-    private int filesize;
-    // Size of a piece in bytes
-    private int piecesize;
+    private int numberPreferredNeighbors; // The number of neighbors which are preferred
+    private int unchoke; // Unchoking Interval
+    private int optimisticUnchoke; // Optimistic Unchoking Interval
+    private String filename; // Name of the file desired by the peer
+    private int filesize; // Size of the desired file in bytes
+    private int piecesize; // Size of a piece in bytes
 
     // Peers of the current peer
     private ArrayList<PeerConfiguration> peers;
