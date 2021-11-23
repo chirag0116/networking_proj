@@ -113,5 +113,10 @@ public class PeerConfiguration {
 
         return new PeerConfiguration(id, hostname, port, hasFile);
     }
+
+    @Override
+    public String toString() {
+        return "(id=" + id + ",port=" + port + ",hostname=" + hostname + ")";
+    }
 }
 
