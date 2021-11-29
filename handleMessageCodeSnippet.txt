@@ -1,0 +1,25 @@
+List<boolean> hasPiece;
+Map<int, Server> servers;
+
+private handleMessage(Message message) {
+    if (message instanceOf HaveMessage) {
+        HaveMessage msg = (HaveMessage)message;
+        int senderId = msg.getPeer().getId();
+        Message response = handleHaveMessage(msg, this.hasPiece);
+        this.servers.get(senderId).sendMessage(response);
+    }
+    if (message instanceOf PieceMessage) {
+        // something
+    }
+    // ...
+}
+
+public static Message handleHaveMessage(HaveMessage msg, List<boolean> hasPiece) {
+    int pieceIndex = msg.getIndex();
+    if (hasPiece.get(pieceIndex)) {
+        return new RequestMessage(pieceIndex, msg.getPeer());
+    }
+    else {
+        return null;
+    }
+}
