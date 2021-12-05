@@ -38,7 +38,7 @@ public class Peer {
     ConcurrentHashMap<Integer,Server> servers;
 
     // Bitfield - stores whether each peer (including self!) has each piece
-    Map<Integer, boolean[]> bitfields;
+    ConcurrentHashMap<Integer, boolean[]> bitfields;
 
     // Number of pieces received in last interval from peer
     // key=peer's id, value=number of pieces
@@ -76,7 +76,7 @@ public class Peer {
 
         this.messageQueue = new LinkedBlockingQueue<>();
         this.servers = new ConcurrentHashMap<>(this.peers.size()); // initial capacity
-        this.bitfields = new Hashtable<>(this.peers.size() + 1); // initial capacity
+        this.bitfields = new ConcurrentHashMap<>(this.peers.size() + 1); // initial capacity
 
         for (PeerConfiguration p : peersInFile) {
             boolean[] bitfield = new boolean[numberOfPieces()];
@@ -120,13 +120,6 @@ public class Peer {
             System.out.println("Issue setting up file - terminating");
             e.printStackTrace();
             return; // Terminate
-        }
-
-        // Send bitfield to peers
-        boolean[] selfBitfield = bitfields.get(self.getId());
-        for (PeerConfiguration peer : peers) {
-            BitfieldMessage m = new BitfieldMessage(selfBitfield, peer);
-            servers.get(peer.getId()).sendMessage(m);
         }
 
         while (true) {
@@ -176,6 +169,7 @@ public class Peer {
             }
         }
 
+        boolean[] selfBitfield = bitfields.get(self.getId());
         for (PeerConfiguration peer : peers) {
             Peer instance = this;
             Server server = new Server(self, peer, (peer.getId() > self.getId()), (Message m) -> {
@@ -185,19 +179,21 @@ public class Peer {
                 }
             });
             servers.put(peer.getId(), server);
-        }
 
-        // Putting this in a different loop because we might have to
-        // do some fancy threading stuff here later
-        for (PeerConfiguration peer : peers) {
-            boolean success = servers.get(peer.getId()).start();
-            if (!success) {
-                // TODO - find a better way to handle this
-                System.out.println("Server for neighbor " + peer + " failed to start");
-            }
-            else {
-                System.out.println("Server for neighbor " + peer + " started");
-            }
+            Thread serverLauncher = new Thread(() -> {
+                boolean success = servers.get(peer.getId()).start();
+                if (!success) {
+                    // TODO - find a better way to handle this
+                    System.out.println("Server for neighbor " + peer + " failed to start");
+                }
+                else {
+                    System.out.println("Server for neighbor " + peer + " started");
+                    // Send bitfield to peer
+                    BitfieldMessage m = new BitfieldMessage(selfBitfield, peer);
+                    servers.get(peer.getId()).sendMessage(m);
+                }
+            });
+            serverLauncher.start();
         }
     }
 
