@@ -38,7 +38,7 @@ public class Peer {
     ConcurrentHashMap<Integer,Server> servers;
 
     // Bitfield - stores whether each peer (including self!) has each piece
-    Map<Integer, ArrayList<Boolean>> bitfields;
+    Map<Integer, boolean[]> bitfields;
 
     // Number of pieces received in last interval from peer
     // key=peer's id, value=number of pieces
@@ -79,9 +79,9 @@ public class Peer {
         this.bitfields = new Hashtable<>(this.peers.size() + 1); // initial capacity
 
         for (PeerConfiguration p : peersInFile) {
-            Boolean[] bitfield = new Boolean[numberOfPieces()];
+            boolean[] bitfield = new boolean[numberOfPieces()];
             Arrays.fill(bitfield, p.hasFile());
-            this.bitfields.put(p.getId(), new ArrayList<>(Arrays.asList(bitfield)));
+            this.bitfields.put(p.getId(), bitfield);
         }
 
     }
@@ -120,6 +120,13 @@ public class Peer {
             System.out.println("Issue setting up file - terminating");
             e.printStackTrace();
             return; // Terminate
+        }
+
+        // Send bitfield to peers
+        boolean[] selfBitfield = bitfields.get(self.getId());
+        for (PeerConfiguration peer : peers) {
+            BitfieldMessage m = new BitfieldMessage(selfBitfield, peer);
+            servers.get(peer.getId()).sendMessage(m);
         }
 
         while (true) {
