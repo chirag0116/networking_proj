@@ -50,9 +50,7 @@ public class peerProcess {
             return; // Fail
         }
 
-        peer.startUp();
         peer.run();
-        peer.shutDown();
     }
 
 }
