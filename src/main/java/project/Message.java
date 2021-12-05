@@ -66,6 +66,10 @@ public abstract class Message {
         return peer;
     }
 
+    public void setPeer(PeerConfiguration peer) {
+        this.peer = peer;
+    }
+
     /**
      * This is simple implementation of equals
      * for Messages. Subclasses may need to
@@ -92,5 +96,23 @@ public abstract class Message {
         return this.serialize();
     }
 
+    @Override
+    public int hashCode() {
+        return Objects.hash(getPeer().hashCode(), serialize().hashCode());
+    }
+
+    /**
+     * Helper method to see information about the
+     * Message during testing.
+     * @return an informational string about the message
+     */
+    public String info() {
+        byte[] payload = StringEncoder.stringToBytes(getPayloadBytes());
+        StringBuilder sb = new StringBuilder();
+        for (byte b : payload) {
+            sb.append(String.format("%02X", b));
+        }
+        return String.format("(Length=%d, Type=%d, Content=0x%s)", getLength(), getType(), sb);
+    }
 
 }

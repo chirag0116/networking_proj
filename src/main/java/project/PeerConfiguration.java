@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Objects;
 
 /**
  * Class for storing information of
@@ -62,6 +63,11 @@ public class PeerConfiguration {
                 other.getPort() == this.port &&
                 other.getHostname().equals(this.hostname) &&
                 other.hasFile == this.hasFile();
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getId(), getPort(), getHostname().hashCode(), (hasFile() ? 1 : 0));
     }
 
     public static ArrayList<PeerConfiguration> loadPeerConfigurations(String configFilePath)
