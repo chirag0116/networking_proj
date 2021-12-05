@@ -188,9 +188,11 @@ public class Peer {
                 }
                 else {
                     System.out.println("Server for neighbor " + peer + " started");
-                    // Send bitfield to peer
-                    BitfieldMessage m = new BitfieldMessage(selfBitfield, peer);
-                    servers.get(peer.getId()).sendMessage(m);
+                    // Send bitfield to peer if this has the file
+                    if (self.hasFile()) {
+                        BitfieldMessage m = new BitfieldMessage(selfBitfield, peer);
+                        servers.get(peer.getId()).sendMessage(m);
+                    }
                 }
             });
             serverLauncher.start();
