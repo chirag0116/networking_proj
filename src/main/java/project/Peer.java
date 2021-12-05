@@ -28,7 +28,8 @@ public class Peer {
     // Message Queue
     private BlockingQueue<Message> messageQueue;
 
-    public Peer(int id, String commonConfigPath, String peerConfigPath) throws FileNotFoundException, ParseException, IOException {
+    public Peer(int id, String commonConfigPath, String peerConfigPath)
+            throws FileNotFoundException, ParseException, IOException, IllegalArgumentException {
         CommonConfiguration commonConfig = new CommonConfiguration(commonConfigPath);
         commonConfig.load(); // Let it throw
         this.numberPreferredNeighbors = commonConfig.numberPreferredNeighbors;
@@ -41,6 +42,7 @@ public class Peer {
         // Split the peers from the file into this one, and the others
         ArrayList<PeerConfiguration> peersInFile = PeerConfiguration.loadPeerConfigurations(peerConfigPath); // Let it throw
         this.peers = new ArrayList<>();
+        this.self = null;
         for (PeerConfiguration p : peersInFile) {
             if (p.getId() == id) {
                 this.self = p;
@@ -48,6 +50,10 @@ public class Peer {
             else {
                 this.peers.add(p);
             }
+        }
+        if (self == null) {
+            throw new IllegalArgumentException(
+                "Invalid id passed to Peer; id not found in peer config file at " + peerConfigPath);
         }
 
         // Linked List based queue
@@ -130,46 +136,5 @@ public class Peer {
             System.out.println(msg);
         }
         e.printStackTrace();
-    }
-
-    public static void main(String[] args) {
-        int id = -1;
-        try {
-            id = Integer.parseInt(args[0]);
-        }
-        catch (NumberFormatException e) {
-            System.out.println("Invalid id argument - not an integer");
-            return; // Fail
-        }
-
-        if (id < 0) {
-            System.out.println("Invalid id argument - not a positive integer");
-            return; // Fail
-        }
-
-        Peer peer = null;
-        try {
-            peer = new Peer(id, "Common.cfg", "PeerInfo.cfg");
-        }
-        catch (FileNotFoundException e) {
-            System.out.println("Could not create Peer due to missing file:");
-            e.printStackTrace();
-        }
-        catch (ParseException e) {
-            System.out.println("Could not create Peer due to invalid syntax in configuration files:");
-            e.printStackTrace();
-        }
-        catch (IOException e) {
-            System.out.println("Could not create Peer due to IOException:");
-            e.printStackTrace();
-        }
-
-        if (peer == null) {
-            return; // Fail
-        }
-
-        peer.startUp();
-        peer.run();
-        peer.shutDown();
     }
 }
