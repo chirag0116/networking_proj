@@ -351,7 +351,8 @@ public class Peer {
             response = handleBitfieldMessage(m);
         }
         else if (msg instanceof RequestMessage) {
-
+            RequestMessage m = (RequestMessage) msg;
+            response = handleRequestMessage(m);
         }
         else if (msg instanceof PieceMessage) {
 
@@ -396,6 +397,30 @@ public class Peer {
         beingChokedBy.add(senderId); // Note we are being choked
         pendingRequests.remove(senderId); // The pending request we made won't be fulfilled
         return null; // No response
+    }
+
+    private Message handleRequestMessage(RequestMessage msg) {
+        if (!isUnchoked(msg.getPeer().getId())) {
+            System.out.printf("Peer %d requested piece %d from Peer %d while choked%n",
+                    msg.getPeer().getId(), msg.getIndex(), self.getId());
+            return null; // ignore the request because sender is choked
+        }
+        else if (msg.getIndex() < 0 || msg.getIndex() > numberOfPieces()) {
+            // Piece index out of bounds - error case
+            System.out.printf("Peer %d requested bad-index piece %d from Peer %d%n",
+                    msg.getPeer().getId(), msg.getIndex(), self.getId());
+            return null;
+        }
+        else if (!bitfields.get(self.getId())[msg.getIndex()]) {
+            // Don't have this piece - error case
+            System.out.printf("Peer %d requested non-owned piece %d from Peer %d%n",
+                    msg.getPeer().getId(), msg.getIndex(), self.getId());
+            return null; // we don't have this piece, ignore it
+        }
+        else {
+            byte[] piece = loadPiece(msg.getIndex());
+            return new PieceMessage(msg.getIndex(), piece, msg.getPeer());
+        }
     }
 
     // TODO -- Make this dump to file and print
@@ -586,5 +611,12 @@ public class Peer {
             }
         }
         return result;
+    }
+
+    private boolean isUnchoked(Integer peerId) throws IndexOutOfBoundsException {
+        if (!preferred.containsKey(peerId)) {
+            throw new IndexOutOfBoundsException("Invalid peer ID");
+        }
+        return preferred.get(peerId) || Objects.equals(optimisticallyUnchokedPeer.get(), peerId);
     }
 }
