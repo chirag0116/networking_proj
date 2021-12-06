@@ -422,10 +422,12 @@ public class Peer {
         Integer senderId = msg.getPeer().getId();
         bitfields.get(senderId)[msg.getIndex()] = true;
 
-        if (!bitfields.get(self.getId())[msg.getIndex()])
+        if (!bitfields.get(self.getId())[msg.getIndex()]) {
             return new InterestedMessage(msg.getPeer());
-        else
+        }
+        else if (pickNewPieceToRequest(msg.getPeer().getId()) == -1){
             return new UninterestedMessage(msg.getPeer());
+        }
     }
 
     private Message handleRequestMessage(RequestMessage msg) {
@@ -482,7 +484,9 @@ public class Peer {
                 }
                 bitfields.get(self.getId())[msg.getIndex()] = true;
                 for (PeerConfiguration peer : peers) {
-                    // Was interesting but not anymore
+                    // Tell everyone we have it
+                    servers.get(peer.getId()).sendMessage(new HaveMessage(msg.getIndex(), peer));
+                    // Tell them we are not longer interested, if applicable
                     if (wasInteresting.contains(peer.getId()) && pickNewPieceToRequest(peer.getId()) == -1) {
                         servers.get(peer.getId()).sendMessage(new UninterestedMessage(peer));
                     }
