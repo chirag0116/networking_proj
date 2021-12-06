@@ -4,11 +4,14 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.lang.reflect.Array;
 import java.text.ParseException;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class Peer {
 
@@ -35,14 +38,61 @@ public class Peer {
     private BlockingQueue<Message> messageQueue;
 
     // Servers for each peer - key=target's id, value=server
-    ConcurrentHashMap<Integer,Server> servers;
+    ConcurrentMap<Integer,Server> servers;
 
     // Bitfield - stores whether each peer (including self!) has each piece
-    ConcurrentHashMap<Integer, boolean[]> bitfields;
+    ConcurrentMap<Integer, boolean[]> bitfields;
 
     // Number of pieces received in last interval from peer
     // key=peer's id, value=number of pieces
-    Map<Integer, Integer> piecesReceivedInLastInterval;
+    ConcurrentMap<Integer, Integer> piecesReceivedInLastInterval;
+
+    // Stores whether a peer is currently preferred (T/F)
+    // key=peer's id, value=whether peer is preferred
+    ConcurrentMap<Integer, Boolean> preferred;
+
+    // The peer who is optimistically unchoked right now; the integer stored is its id
+    AtomicReference<Integer> optimisticallyUnchokedPeer;
+
+    private final TimerTask DETERMINE_PREFERRED_NEIGHBORS = new TimerTask() {
+        @Override
+        public void run() {
+            // Get the new preferred neighbors
+            ConcurrentMap<Integer,Boolean> newPreferred =
+                    computePreferredNeighbors(peers, piecesReceivedInLastInterval, numberPreferredNeighbors);
+
+            // Send the choke and unchoke messages
+            for (PeerConfiguration peer : peers) {
+                if (newPreferred.get(peer.getId()) && !preferred.get(peer.getId())) {
+                    UnchokeMessage m = new UnchokeMessage(peer);
+                    servers.get(peer.getId()).sendMessage(m);
+                }
+                else if (!newPreferred.get(peer.getId()) && preferred.get(peer.getId())) {
+                    if (optimisticallyUnchokedPeer.get() != peer.getId()) {
+                        ChokeMessage m = new ChokeMessage(peer);
+                        servers.get(peer.getId()).sendMessage(m);
+                    }
+                }
+            }
+
+            // Zero out the scores
+            for (PeerConfiguration peer : peers) {
+                piecesReceivedInLastInterval.put(peer.getId(), 0);
+            }
+        }
+    };
+
+    private final TimerTask DETERMINE_OPT_UNCHOKED_NEIGHBOR = new TimerTask() {
+        @Override
+        public void run() {
+            int unchokeId = pickOptUnchokedNeighbor(peers, preferred);
+            optimisticallyUnchokedPeer.set(unchokeId);
+            PeerConfiguration peer = getPeer(unchokeId);
+            UnchokeMessage m = new UnchokeMessage(peer);
+            servers.get(unchokeId).sendMessage(m);
+            System.out.println("Optimistically unchoked peer with id=" + unchokeId); // Change to proper log
+        }
+    };
 
     public Peer(int id, String commonConfigPath, String peerConfigPath)
             throws FileNotFoundException, ParseException, IOException, IllegalArgumentException {
@@ -54,7 +104,6 @@ public class Peer {
         this.filename = commonConfig.filename;
         this.filesize = commonConfig.filesize;
         this.piecesize = commonConfig.piecesize;
-
 
         // Split the peers from the file into this one, and the others
         ArrayList<PeerConfiguration> peersInFile = PeerConfiguration.loadPeerConfigurations(peerConfigPath); // Let it throw
@@ -76,6 +125,13 @@ public class Peer {
 
         this.messageQueue = new LinkedBlockingQueue<>();
         this.servers = new ConcurrentHashMap<>(this.peers.size()); // initial capacity
+        this.preferred = new ConcurrentHashMap<>(numberPreferredNeighbors);
+        this.optimisticallyUnchokedPeer = new AtomicReference<>();
+        this.piecesReceivedInLastInterval = new ConcurrentHashMap<>(this.peers.size());
+        for (PeerConfiguration peer : peers) {
+            piecesReceivedInLastInterval.put(peer.getId(), 0);
+        }
+
         this.bitfields = new ConcurrentHashMap<>(this.peers.size() + 1); // initial capacity
 
         for (PeerConfiguration p : peersInFile) {
@@ -121,6 +177,12 @@ public class Peer {
             e.printStackTrace();
             return; // Terminate
         }
+
+        // Delays are 1000L to convert from seconds to milliseconds
+        Timer preferredTimer = new Timer();
+        preferredTimer.schedule(DETERMINE_PREFERRED_NEIGHBORS, 0, unchoke * 1000L);
+        Timer unchokeTimer = new Timer();
+        unchokeTimer.schedule(DETERMINE_OPT_UNCHOKED_NEIGHBOR, 0, optimisticUnchoke * 1000L);
 
         while (true) {
             try {
@@ -292,5 +354,80 @@ public class Peer {
 
         f.seek(index);
         f.write(piece);
+    }
+
+    /**
+     * Picks a random neighbor to optimistically
+     * unchoke, and returns it.
+     * !!! NOTE: DOES NOT DO THE UNCHOKING, THIS MUST BE DONE
+     * BY THE CALLER !!!
+     * static for testing
+     * @return id of the neighbor to unchoke
+     */
+    public static int pickOptUnchokedNeighbor(ArrayList<PeerConfiguration> peers, Map<Integer, Boolean> preferred) {
+        ArrayList<PeerConfiguration> candidates = new ArrayList<>();
+        for (PeerConfiguration peer : peers) {
+            if (!preferred.get(peer.getId())) {
+                candidates.add(peer);
+            }
+        }
+        Collections.shuffle(candidates);
+        return candidates.get(0).getId();
+    }
+
+    /**
+     * Find the peer with the specified id
+     * @return the peer
+     */
+    private PeerConfiguration getPeer(int id) throws IllegalArgumentException {
+        for (PeerConfiguration peer : peers) {
+            if (peer.getId() == id) {
+                return peer;
+            }
+        }
+        throw new IllegalArgumentException("No peer with specified id");
+    }
+
+    /**
+     * Computes the new set of preferred neighbors,
+     * and returns it
+     * !!! NOTE: DOES NOT MODIFY THE CLASS MEMBERS,
+     * CALLER MUST DO SO !!!
+     * static for testing
+     * @param peers - list of peers (just pass this.peers)
+     * @param scores - map of scores for each peer from the previous interval (pass this.receivedInLastInterval)
+     * @param numberNeighbors - number of preferred neighbors requested (pass this.numberOfPreferredNeighbors
+     * @return map of containing id keys and value of whether peer with id is preferred
+     */
+    private static ConcurrentMap<Integer, Boolean> computePreferredNeighbors(
+            ArrayList<PeerConfiguration> peers,
+            ConcurrentMap<Integer, Integer> scores,
+            int numberNeighbors
+    ) {
+        ArrayList<Integer> sortedPeers = new ArrayList<>();
+        for (PeerConfiguration peer : peers) {
+            sortedPeers.add(peer.getId());
+        }
+        sortedPeers.sort(new Comparator<Integer>() {
+            @Override
+            public int compare(Integer o1, Integer o2) {
+                int score1 = scores.get(o1);
+                int score2 = scores.get(o2);
+                if (score1 > score2) {
+                    return 1;
+                } else if (score1 < score2) {
+                    return -1;
+                } else {
+                    // Decide ties randomly, with equal probability
+                    return (Math.random() > 0.5) ? 1 : -1;
+                }
+            }
+        });
+        ConcurrentMap<Integer, Boolean> result = new ConcurrentHashMap<>();
+        for (int i = 0; i < sortedPeers.size(); i++) {
+            // id -> true if it is the K first elements, where k = numberNeighbors
+            result.put(sortedPeers.get(i), (i < numberNeighbors));
+        }
+        return result;
     }
 }
