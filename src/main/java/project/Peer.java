@@ -324,7 +324,8 @@ public class Peer {
             response = handleChokeMessage(m);
         }
         else if (msg instanceof UnchokeMessage) {
-
+            UnchokeMessage m = (UnchokeMessage) msg;
+            response = handleUnchokeMessage(m);
         }
         else if (msg instanceof InterestedMessage) {
             if (!interested.get(msg.getPeer().getId())) {
@@ -344,7 +345,6 @@ public class Peer {
         }
         else if (msg instanceof HaveMessage) {
             HaveMessage m = (HaveMessage) msg;
-
         }
         else if (msg instanceof BitfieldMessage) {
             BitfieldMessage m = (BitfieldMessage) msg;
@@ -398,6 +398,16 @@ public class Peer {
         beingChokedBy.add(senderId); // Note we are being choked
         pendingRequests.remove(senderId); // The pending request we made won't be fulfilled
         return null; // No response
+    }
+
+    private Message handleUnchokeMessage(UnchokeMessage msg) {
+        Integer senderId = msg.getPeer().getId();
+        if (beingChokedBy.contains(senderId))
+            beingChokedBy.remove(senderId);
+
+        // should send a request message, check for what piece the sender can give the received (self)
+        return new RequestMessage(pickNewPieceToRequest(senderId), msg.getPeer());
+        // sends to the highest fed data givers among interested (don't know what standard to set)
     }
 
     private Message handleRequestMessage(RequestMessage msg) {
