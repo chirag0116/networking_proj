@@ -408,7 +408,7 @@ public class Peer {
      * @param numberNeighbors - number of preferred neighbors requested (pass this.numberOfPreferredNeighbors
      * @return map of containing id keys and value of whether peer with id is preferred
      */
-    private static ConcurrentMap<Integer, Boolean> computePreferredNeighbors(
+    public static ConcurrentMap<Integer, Boolean> computePreferredNeighbors(
             ArrayList<PeerConfiguration> peers,
             ConcurrentMap<Integer, Integer> scores,
             int numberNeighbors
