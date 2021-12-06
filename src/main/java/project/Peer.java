@@ -319,13 +319,42 @@ public class Peer {
      */
     private void handleMessage(Message msg) throws UnsupportedOperationException {
         Message response = null;
-        if (msg instanceof BitfieldMessage) {
+        if (msg instanceof ChokeMessage) {
+            ChokeMessage m = (ChokeMessage) msg;
+            response = handleChokeMessage(m);
+        }
+        else if (msg instanceof UnchokeMessage) {
+
+        }
+        else if (msg instanceof InterestedMessage) {
+            if (!interested.get(msg.getPeer().getId())) {
+                interested.put(msg.getPeer().getId(), true);
+            }
+            else {
+                System.out.println("Peer is already interested");
+            }
+        }
+        else if (msg instanceof UninterestedMessage) {
+            if (interested.get(msg.getPeer().getId())) {
+                interested.put(msg.getPeer().getId(), false);
+            }
+            else {
+                System.out.println("Peer is already not interested");
+            }
+        }
+        else if (msg instanceof HaveMessage) {
+            HaveMessage m = (HaveMessage) msg;
+
+        }
+        else if (msg instanceof BitfieldMessage) {
             BitfieldMessage m = (BitfieldMessage) msg;
             response = handleBitfieldMessage(m);
         }
-        else if (msg instanceof ChokeMessage) {
-            ChokeMessage m = (ChokeMessage) msg;
-            response = handleChokeMessage(m);
+        else if (msg instanceof RequestMessage) {
+
+        }
+        else if (msg instanceof PieceMessage) {
+
         }
         else {
             throw new UnsupportedOperationException("Unsupported message type");
