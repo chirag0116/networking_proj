@@ -30,5 +30,9 @@ public class MessageLogger {
 
         this.log.info("Peer " + selfID + " has the preferred neighbors" + neighborList + ".");
     }
+
+    public void logOptimistic (int selfID, int unchokedID) {
+        log.info("Peer " + selfID + " has the optimistically unchoked neighbor " + unchokedID + ".");
+    }
 }
 

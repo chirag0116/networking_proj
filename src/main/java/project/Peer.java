@@ -83,6 +83,8 @@ public class Peer {
             }
             else {
                 newPreferred = computePreferredNeighborsAltruistic(peers, interested, numberPreferredNeighbors);
+                //LOG -- new preferred neighbors
+                mLog.logChangeNeighbors(self.getId(), newPreferred);
             }
 
             // Send the choke and unchoke messages
@@ -119,7 +121,8 @@ public class Peer {
             }
             // Unchoke the new one
             servers.get(unchokeId).sendMessage(new UnchokeMessage(getPeerWithId(unchokeId)));
-            System.out.println("Optimistically unchoked peer with id=" + unchokeId); // Change to proper log
+            //LOG -- optimistically unchoked neighbor
+            mLog.logOptimistic(self.getId(), unchokeId);
         }
     };
 
