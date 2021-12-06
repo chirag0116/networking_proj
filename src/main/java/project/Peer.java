@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.lang.reflect.Array;
 import java.text.ParseException;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
@@ -91,7 +90,7 @@ public class Peer {
         public void run() {
             int unchokeId = pickOptUnchokedNeighbor(peers, preferred, interested);
             optimisticallyUnchokedPeer.set(unchokeId);
-            PeerConfiguration peer = getPeer(unchokeId);
+            PeerConfiguration peer = getPeerWithId(unchokeId);
             UnchokeMessage m = new UnchokeMessage(peer);
             servers.get(unchokeId).sendMessage(m);
             System.out.println("Optimistically unchoked peer with id=" + unchokeId); // Change to proper log
@@ -388,7 +387,7 @@ public class Peer {
      * Find the peer with the specified id
      * @return the peer
      */
-    private PeerConfiguration getPeer(int id) throws IllegalArgumentException {
+    private PeerConfiguration getPeerWithId(int id) throws IllegalArgumentException {
         for (PeerConfiguration peer : peers) {
             if (peer.getId() == id) {
                 return peer;
