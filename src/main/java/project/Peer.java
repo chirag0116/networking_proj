@@ -217,7 +217,7 @@ public class Peer {
         Timer unchokeTimer = new Timer();
         unchokeTimer.schedule(DETERMINE_OPT_UNCHOKED_NEIGHBOR, 0, optimisticUnchoke * 1000L);
 
-        while (true) {
+        while (!isComplete()) {
             try {
                 // Blocks until a message is available
                 Message msg = this.messageQueue.take();
@@ -319,13 +319,44 @@ public class Peer {
      */
     private void handleMessage(Message msg) throws UnsupportedOperationException {
         Message response = null;
-        if (msg instanceof BitfieldMessage) {
+        if (msg instanceof ChokeMessage) {
+            ChokeMessage m = (ChokeMessage) msg;
+            response = handleChokeMessage(m);
+        }
+        else if (msg instanceof UnchokeMessage) {
+            UnchokeMessage m = (UnchokeMessage) msg;
+            response = handleUnchokeMessage(m);
+        }
+        else if (msg instanceof InterestedMessage) {
+            if (!interested.get(msg.getPeer().getId())) {
+                interested.put(msg.getPeer().getId(), true);
+            }
+            else {
+                System.out.println("Peer is already interested");
+            }
+        }
+        else if (msg instanceof UninterestedMessage) {
+            if (interested.get(msg.getPeer().getId())) {
+                interested.put(msg.getPeer().getId(), false);
+            }
+            else {
+                System.out.println("Peer is already not interested");
+            }
+        }
+        else if (msg instanceof HaveMessage) {
+            HaveMessage m = (HaveMessage) msg;
+        }
+        else if (msg instanceof BitfieldMessage) {
             BitfieldMessage m = (BitfieldMessage) msg;
             response = handleBitfieldMessage(m);
         }
-        else if (msg instanceof ChokeMessage) {
-            ChokeMessage m = (ChokeMessage) msg;
-            response = handleChokeMessage(m);
+        else if (msg instanceof RequestMessage) {
+            RequestMessage m = (RequestMessage) msg;
+            response = handleRequestMessage(m);
+        }
+        else if (msg instanceof PieceMessage) {
+            PieceMessage m = (PieceMessage) msg;
+            response = handlePieceMessage(m);
         }
         else {
             throw new UnsupportedOperationException("Unsupported message type");
@@ -367,6 +398,108 @@ public class Peer {
         beingChokedBy.add(senderId); // Note we are being choked
         pendingRequests.remove(senderId); // The pending request we made won't be fulfilled
         return null; // No response
+    }
+
+    private Message handleUnchokeMessage(UnchokeMessage msg) {
+        Integer senderId = msg.getPeer().getId();
+        if (beingChokedBy.contains(senderId))
+            beingChokedBy.remove(senderId);
+
+        // should send a request message, check for what piece the sender can give the received (self)
+        return new RequestMessage(pickNewPieceToRequest(senderId), msg.getPeer());
+        // sends to the highest fed data givers among interested (don't know what standard to set)
+    }
+
+    private Message handleRequestMessage(RequestMessage msg) {
+        if (!isUnchoked(msg.getPeer().getId())) {
+            System.out.printf("Peer %d requested piece %d from Peer %d while choked%n",
+                    msg.getPeer().getId(), msg.getIndex(), self.getId());
+            return null; // ignore the request because sender is choked
+        }
+        else if (msg.getIndex() < 0 || msg.getIndex() > numberOfPieces()) {
+            // Piece index out of bounds - error case
+            System.out.printf("Peer %d requested bad-index piece %d from Peer %d%n",
+                    msg.getPeer().getId(), msg.getIndex(), self.getId());
+            return null;
+        }
+        else if (!bitfields.get(self.getId())[msg.getIndex()]) {
+            // Don't have this piece - error case
+            System.out.printf("Peer %d requested non-owned piece %d from Peer %d%n",
+                    msg.getPeer().getId(), msg.getIndex(), self.getId());
+            return null; // we don't have this piece, ignore it
+        }
+        else {
+            byte[] piece = loadPiece(msg.getIndex());
+            return new PieceMessage(msg.getIndex(), piece, msg.getPeer());
+        }
+    }
+
+    private Message handlePieceMessage(PieceMessage msg) {
+        if (!pendingRequests.containsKey(msg.getPeer().getId())) {
+            // We didn't request from this peer - print an error, don't store the piece, and keep going
+            System.out.printf("Peer %d sent piece %d to Peer %d when no piece was requested%n",
+                    msg.getPeer().getId(), msg.getIndex(), self.getId());
+        }
+        else if (pendingRequests.get(msg.getPeer().getId()) != msg.getIndex()) {
+            // We requested a different piece - print an error, don't store the piece, and keep going
+            System.out.printf("Peer %d sent piece %d to Peer %d when a different piece (Piece %d) was requested%n",
+                    msg.getPeer().getId(), msg.getIndex(), self.getId(), pendingRequests.get(msg.getPeer().getId()));
+        }
+        else if (bitfields.get(self.getId())[msg.getIndex()]) {
+            // We already have this piece - print an error, don't store the piece, and keep going
+            System.out.printf("Peer %d sent piece %d to Peer %d when already owned%n",
+                    msg.getPeer().getId(), msg.getIndex(), self.getId());
+        }
+        else {
+            // Success! We want it and don't have it
+            try {
+                storePiece(msg.getPiece(), msg.getIndex());
+                pendingRequests.remove(msg.getPeer().getId(), msg.getIndex());
+            }
+            catch (IOException e) {
+                System.out.printf("Peer %d could not store piece %d due to IOException%n", self.getId(), msg.getIndex());
+            }
+        }
+
+        if (beingChokedBy.contains(msg.getPeer().getId())) {
+            return null; // We're being choked now, stop requesting
+        }
+        else {
+            Integer newPieceToRequest = pickNewPieceToRequest(msg.getPeer().getId());
+            if (newPieceToRequest == -1) {
+                return new UninterestedMessage(msg.getPeer());
+            }
+            else {
+                return new RequestMessage(newPieceToRequest, msg.getPeer());
+            }
+        }
+    }
+
+    private Integer pickNewPieceToRequest(Integer peerId) {
+        return pickNewPieceToRequest(bitfields.get(peerId), bitfields.get(self.getId()), pendingRequests);
+    }
+
+    public static Integer pickNewPieceToRequest(
+            boolean[] peerBitfield,
+            boolean[] selfBitfield,
+            Map<Integer,Integer> requests
+    ) {
+        List<Integer> interestingPieces = new LinkedList<>();
+        for (int i = 0; i < peerBitfield.length; i++) {
+            // They have it, we don't, and we haven't asked anyone else
+            if (peerBitfield[i] && !selfBitfield[i] && !requests.containsValue(i)) {
+                interestingPieces.add(i);
+            }
+        }
+
+        if (interestingPieces.isEmpty()) {
+            return -1; // Nothing interesting
+        }
+        else {
+            // Pick one randomly
+            Collections.shuffle(interestingPieces);
+            return interestingPieces.get(0);
+        }
     }
 
     // TODO -- Make this dump to file and print
@@ -557,5 +690,35 @@ public class Peer {
             }
         }
         return result;
+    }
+
+    private boolean isUnchoked(Integer peerId) throws IndexOutOfBoundsException {
+        if (!preferred.containsKey(peerId)) {
+            throw new IndexOutOfBoundsException("Invalid peer ID");
+        }
+        return preferred.get(peerId) || Objects.equals(optimisticallyUnchokedPeer.get(), peerId);
+    }
+
+    // Check the completion condition - whether all peers have file
+    private boolean isComplete() {
+        self.setHasFile(hasAllPieces(bitfields.get(self.getId())));
+        for (PeerConfiguration peer : peers) {
+            peer.setHasFile(hasAllPieces(bitfields.get(peer.getId())));
+        }
+        for (PeerConfiguration peer : peers) {
+            if (!peer.hasFile()) {
+                return false;
+            }
+        }
+        return self.hasFile();
+    }
+
+    public static boolean hasAllPieces(boolean[] bitfield) {
+        for (boolean b : bitfield) {
+            if (!b) {
+                return false;
+            }
+        }
+        return true;
     }
 }
