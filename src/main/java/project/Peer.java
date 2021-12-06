@@ -60,9 +60,15 @@ public class Peer {
     private final TimerTask DETERMINE_PREFERRED_NEIGHBORS = new TimerTask() {
         @Override
         public void run() {
-            // Get the new preferred neighbors
-            ConcurrentMap<Integer,Boolean> newPreferred =
-                    computePreferredNeighbors(peers, piecesReceivedInLastInterval, numberPreferredNeighbors);
+            ConcurrentMap<Integer,Boolean> newPreferred;
+            if (!self.hasFile()) {
+                // Get the new preferred neighbors
+                newPreferred = computePreferredNeighbors(peers, piecesReceivedInLastInterval, numberPreferredNeighbors);
+            }
+            else {
+                newPreferred = computePreferredNeighborsAltruistic(peers, interested, numberPreferredNeighbors);
+            }
+
 
             // Send the choke and unchoke messages
             for (PeerConfiguration peer : peers) {
@@ -412,6 +418,7 @@ public class Peer {
             ConcurrentMap<Integer, Integer> scores,
             int numberNeighbors
     ) {
+        // TODO - BUG: This needs to only include peers who are interested in the result
         ArrayList<Integer> sortedPeers = new ArrayList<>();
         for (PeerConfiguration peer : peers) {
             sortedPeers.add(peer.getId());
@@ -435,6 +442,41 @@ public class Peer {
         for (int i = 0; i < sortedPeers.size(); i++) {
             // id -> true if it is the K first elements, where k = numberNeighbors
             result.put(sortedPeers.get(i), (i < numberNeighbors));
+        }
+        return result;
+    }
+
+    /**
+     * Computes a set of preferred neighbors when this instance
+     * already has the file. Picks randomly from the interested peers.
+     * !!! NOTE: DOES NOT MODIFY THE CLASS MEMBERS,
+     * CALLER MUST DO SO !!!
+     * static for testing
+     * @param peers - list of peers (just pass this.peers)
+     * @param interested - map of peer ids to whether they are interested
+     * @param numberNeighbors - number of preferred neighbors requested (pass this.numberOfPreferredNeighbors
+     * @return map of containing id keys and value of whether peer with id is preferred
+     */
+    public static ConcurrentMap<Integer, Boolean> computePreferredNeighborsAltruistic(
+            ArrayList<PeerConfiguration> peers,
+            ConcurrentMap<Integer, Boolean> interested,
+            int numberNeighbors
+    ) {
+        ArrayList<Integer> shuffled = new ArrayList<>();
+        for (PeerConfiguration peer : peers) {
+            shuffled.add(peer.getId());
+        }
+        Collections.shuffle(shuffled);
+        ConcurrentMap<Integer, Boolean> result = new ConcurrentHashMap<>();
+        int count = 0;
+        for (Integer peer : shuffled) {
+            if (count < numberNeighbors && interested.get(peer)) {
+                result.put(peer, true);
+                count++;
+            }
+            else {
+                result.put(peer, false);
+            }
         }
         return result;
     }

@@ -69,4 +69,42 @@ public class PeerTests {
         Assertions.assertTrue(result.get(3));
         Assertions.assertTrue(result.get(4));
     }
+
+    @Test
+    void testComputePreferredNeighborsAltruistic() {
+        ArrayList<PeerConfiguration> peers = new ArrayList<>(Arrays.asList(
+                new PeerConfiguration(1,"foo",8000,false),
+                new PeerConfiguration(2,"foo",8000,false),
+                new PeerConfiguration(3,"foo",8000,false),
+                new PeerConfiguration(4,"foo",8000,false)
+        ));
+        ConcurrentMap<Integer, Boolean> interested = new ConcurrentHashMap<>();
+        interested.put(1,true);
+        interested.put(2,true);
+        interested.put(3,false);
+        interested.put(4,false);
+
+        ConcurrentMap<Integer,Boolean> result = Peer.computePreferredNeighborsAltruistic(peers, interested, 1);
+        Assertions.assertTrue(result.get(1) ^ result.get(2));
+        Assertions.assertFalse(result.get(3));
+        Assertions.assertFalse(result.get(4));
+
+        result = Peer.computePreferredNeighborsAltruistic(peers, interested, 2);
+        Assertions.assertTrue(result.get(1));
+        Assertions.assertTrue(result.get(2));
+        Assertions.assertFalse(result.get(3));
+        Assertions.assertFalse(result.get(4));
+
+        result = Peer.computePreferredNeighborsAltruistic(peers, interested, 3);
+        Assertions.assertTrue(result.get(1));
+        Assertions.assertTrue(result.get(2));
+        Assertions.assertFalse(result.get(3));
+        Assertions.assertFalse(result.get(4));
+
+        result = Peer.computePreferredNeighborsAltruistic(peers, interested, 4);
+        Assertions.assertTrue(result.get(1));
+        Assertions.assertTrue(result.get(2));
+        Assertions.assertFalse(result.get(3));
+        Assertions.assertFalse(result.get(4));
+    }
 }
