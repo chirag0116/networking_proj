@@ -153,6 +153,7 @@ public class Peer {
         this.interested = new ConcurrentHashMap<>(this.peers.size());
         this.preferred = new ConcurrentHashMap<>(numberPreferredNeighbors);
         this.beingChokedBy = new HashSet<>();
+        this.pendingRequests = new ConcurrentHashMap<>();
         this.optimisticallyUnchokedPeer = new AtomicReference<>();
         this.piecesReceivedInLastInterval = new ConcurrentHashMap<>(this.peers.size());
         for (PeerConfiguration peer : peers) {
@@ -317,10 +318,17 @@ public class Peer {
             BitfieldMessage m = (BitfieldMessage) msg;
             response = handleBitfieldMessage(m);
         }
+        else if (msg instanceof ChokeMessage) {
+            ChokeMessage m = (ChokeMessage) msg;
+            response = handleChokeMessage(m);
+        }
         else {
             throw new UnsupportedOperationException("Unsupported message type");
         }
-        servers.get(response.getPeer().getId()).sendMessage(response);
+
+        if (response != null) {
+            servers.get(response.getPeer().getId()).sendMessage(response);
+        }
     }
 
     // Private function - updates internal data structure then calls static function
@@ -347,6 +355,13 @@ public class Peer {
         else {
             return new UninterestedMessage(msg.getPeer());
         }
+    }
+
+    private Message handleChokeMessage(ChokeMessage msg) {
+        Integer senderId = msg.getPeer().getId();
+        beingChokedBy.add(senderId); // Note we are being choked
+        pendingRequests.remove(senderId); // The pending request we made won't be fulfilled
+        return null; // No response
     }
 
     // TODO -- Make this dump to file and print
