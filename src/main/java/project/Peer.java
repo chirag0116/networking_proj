@@ -406,11 +406,16 @@ public class Peer {
 
     private Message handleUnchokeMessage(UnchokeMessage msg) {
         Integer senderId = msg.getPeer().getId();
-        if (beingChokedBy.contains(senderId))
-            beingChokedBy.remove(senderId);
+        beingChokedBy.remove(senderId);
 
         // should send a request message, check for what piece the sender can give the received (self)
-        return new RequestMessage(pickNewPieceToRequest(senderId), msg.getPeer());
+        Integer newPieceToRequest = pickNewPieceToRequest(senderId);
+        if (newPieceToRequest == -1) {
+            return new UninterestedMessage(msg.getPeer());
+        }
+        else {
+            return new RequestMessage(newPieceToRequest, msg.getPeer());
+        }
     }
 
     private Message handleHaveMessage(HaveMessage msg) {
