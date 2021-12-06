@@ -106,12 +106,15 @@ public class Peer {
     private final TimerTask DETERMINE_OPT_UNCHOKED_NEIGHBOR = new TimerTask() {
         @Override
         public void run() {
-            // TODO - BUG: Need to choke the peer who was formerly optimistically unchoked
-            int unchokeId = pickOptUnchokedNeighbor(peers, preferred, interested);
+            int prevPeerId = optimisticallyUnchokedPeer.get();
+            int unchokeId = pickOptUnchokedNeighbor(peers, preferred, interested, prevPeerId);
             optimisticallyUnchokedPeer.set(unchokeId);
-            PeerConfiguration peer = getPeerWithId(unchokeId);
-            UnchokeMessage m = new UnchokeMessage(peer);
-            servers.get(unchokeId).sendMessage(m);
+            // Choke the old one, unless its preferred
+            if (!preferred.get(prevPeerId)) {
+                servers.get(prevPeerId).sendMessage(new ChokeMessage(getPeerWithId(prevPeerId)));
+            }
+            // Unchoke the new one
+            servers.get(unchokeId).sendMessage(new UnchokeMessage(getPeerWithId(unchokeId)));
             System.out.println("Optimistically unchoked peer with id=" + unchokeId); // Change to proper log
         }
     };
@@ -424,11 +427,12 @@ public class Peer {
     public static int pickOptUnchokedNeighbor(
             ArrayList<PeerConfiguration> peers,
             Map<Integer, Boolean> preferred,
-            Map<Integer, Boolean> interested
+            Map<Integer, Boolean> interested,
+            Integer currentOptUnchokedNeighbor
     ) {
         ArrayList<PeerConfiguration> candidates = new ArrayList<>();
         for (PeerConfiguration peer : peers) {
-            if (!preferred.get(peer.getId()) && interested.get(peer.getId())) {
+            if (!preferred.get(peer.getId()) && interested.get(peer.getId()) && currentOptUnchokedNeighbor != peer.getId()) {
                 candidates.add(peer);
             }
         }

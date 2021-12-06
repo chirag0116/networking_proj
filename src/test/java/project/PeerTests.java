@@ -16,7 +16,8 @@ public class PeerTests {
             new PeerConfiguration(1,"foo",8000,false),
             new PeerConfiguration(2,"foo",8000,false),
             new PeerConfiguration(3,"foo",8000,false),
-            new PeerConfiguration(4,"foo",8000,false)
+            new PeerConfiguration(4,"foo",8000,false),
+            new PeerConfiguration(5,"foo",8000,false)
         ));
         Map<Integer,Boolean> preferred = new Hashtable<>();
         Map<Integer,Boolean> interested = new Hashtable<>();
@@ -28,8 +29,10 @@ public class PeerTests {
         interested.put(3, false);
         preferred.put(4, true);
         interested.put(4, true);
+        preferred.put(5, false);
+        interested.put(5, true);
 
-        Assertions.assertEquals(Peer.pickOptUnchokedNeighbor(peers, preferred, interested), 2);
+        Assertions.assertEquals(Peer.pickOptUnchokedNeighbor(peers, preferred, interested, 5), 2);
     }
 
     @Test
