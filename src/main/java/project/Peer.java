@@ -57,6 +57,14 @@ public class Peer {
     // The peer who is optimistically unchoked right now; the integer stored is its id
     AtomicReference<Integer> optimisticallyUnchokedPeer;
 
+    // Peers who are currently choking this peer
+    Set<Integer> beingChokedBy;
+
+    // Peers which have a pending request and the index of the piece requested
+    // Add a (k,v) pair when a piece is requested, remove it once it is received or once you get choked
+    // (NOTE: unlike the other map members, this does not have an entry for all peers at all times)
+    ConcurrentMap<Integer, Integer> pendingRequests;
+
     private final TimerTask DETERMINE_PREFERRED_NEIGHBORS = new TimerTask() {
         @Override
         public void run() {
@@ -98,6 +106,7 @@ public class Peer {
     private final TimerTask DETERMINE_OPT_UNCHOKED_NEIGHBOR = new TimerTask() {
         @Override
         public void run() {
+            // TODO - BUG: Need to choke the peer who was formerly optimistically unchoked
             int unchokeId = pickOptUnchokedNeighbor(peers, preferred, interested);
             optimisticallyUnchokedPeer.set(unchokeId);
             PeerConfiguration peer = getPeerWithId(unchokeId);
@@ -140,14 +149,15 @@ public class Peer {
         this.servers = new ConcurrentHashMap<>(this.peers.size()); // initial capacity
         this.interested = new ConcurrentHashMap<>(this.peers.size());
         this.preferred = new ConcurrentHashMap<>(numberPreferredNeighbors);
+        this.beingChokedBy = new HashSet<>();
         this.optimisticallyUnchokedPeer = new AtomicReference<>();
         this.piecesReceivedInLastInterval = new ConcurrentHashMap<>(this.peers.size());
         for (PeerConfiguration peer : peers) {
             piecesReceivedInLastInterval.put(peer.getId(), 0);
+            preferred.put(peer.getId(), false);
         }
 
         this.bitfields = new ConcurrentHashMap<>(this.peers.size() + 1); // initial capacity
-
         for (PeerConfiguration p : peersInFile) {
             boolean[] bitfield = new boolean[numberOfPieces()];
             Arrays.fill(bitfield, p.hasFile());
