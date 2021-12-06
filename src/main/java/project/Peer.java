@@ -355,7 +355,8 @@ public class Peer {
             response = handleRequestMessage(m);
         }
         else if (msg instanceof PieceMessage) {
-
+            PieceMessage m = (PieceMessage) msg;
+            response = handlePieceMessage(m);
         }
         else {
             throw new UnsupportedOperationException("Unsupported message type");
@@ -420,6 +421,74 @@ public class Peer {
         else {
             byte[] piece = loadPiece(msg.getIndex());
             return new PieceMessage(msg.getIndex(), piece, msg.getPeer());
+        }
+    }
+
+    private Message handlePieceMessage(PieceMessage msg) {
+        if (!pendingRequests.containsKey(msg.getPeer().getId())) {
+            // We didn't request from this peer - print an error, don't store the piece, and keep going
+            System.out.printf("Peer %d sent piece %d to Peer %d when no piece was requested%n",
+                    msg.getPeer().getId(), msg.getIndex(), self.getId());
+        }
+        else if (pendingRequests.get(msg.getPeer().getId()) != msg.getIndex()) {
+            // We requested a different piece - print an error, don't store the piece, and keep going
+            System.out.printf("Peer %d sent piece %d to Peer %d when a different piece (Piece %d) was requested%n",
+                    msg.getPeer().getId(), msg.getIndex(), self.getId(), pendingRequests.get(msg.getPeer().getId()));
+        }
+        else if (bitfields.get(self.getId())[msg.getIndex()]) {
+            // We already have this piece - print an error, don't store the piece, and keep going
+            System.out.printf("Peer %d sent piece %d to Peer %d when already owned%n",
+                    msg.getPeer().getId(), msg.getIndex(), self.getId());
+        }
+        else {
+            // Success! We want it and don't have it
+            try {
+                storePiece(msg.getPiece(), msg.getIndex());
+                pendingRequests.remove(msg.getPeer().getId(), msg.getIndex());
+            }
+            catch (IOException e) {
+                System.out.printf("Peer %d could not store piece %d due to IOException%n", self.getId(), msg.getIndex());
+            }
+        }
+
+        if (beingChokedBy.contains(msg.getPeer().getId())) {
+            return null; // We're being choked now, stop requesting
+        }
+        else {
+            Integer newPieceToRequest = pickNewPieceToRequest(msg.getPeer().getId());
+            if (newPieceToRequest == -1) {
+                return new UninterestedMessage(msg.getPeer());
+            }
+            else {
+                return new RequestMessage(newPieceToRequest, msg.getPeer());
+            }
+        }
+    }
+
+    private Integer pickNewPieceToRequest(Integer peerId) {
+        return pickNewPieceToRequest(bitfields.get(peerId), bitfields.get(self.getId()), pendingRequests);
+    }
+
+    public static Integer pickNewPieceToRequest(
+            boolean[] peerBitfield,
+            boolean[] selfBitfield,
+            Map<Integer,Integer> requests
+    ) {
+        List<Integer> interestingPieces = new LinkedList<>();
+        for (int i = 0; i < peerBitfield.length; i++) {
+            // They have it, we don't, and we haven't asked anyone else
+            if (peerBitfield[i] && !selfBitfield[i] && !requests.containsValue(i)) {
+                interestingPieces.add(i);
+            }
+        }
+
+        if (interestingPieces.isEmpty()) {
+            return -1; // Nothing interesting
+        }
+        else {
+            // Pick one randomly
+            Collections.shuffle(interestingPieces);
+            return interestingPieces.get(0);
         }
     }
 

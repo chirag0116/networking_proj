@@ -152,4 +152,19 @@ public class PeerTests {
         Assertions.assertTrue(response instanceof UninterestedMessage);
         Assertions.assertEquals(response.getPeer(), sender);
     }
+
+    @Test
+    void testPickNewPieceToRequest() {
+        boolean[] peers = {true, false, true, false, true};
+        boolean[] self = {false, true, true, false, false};
+        Map<Integer,Integer> requested = new Hashtable<>();
+        requested.put(3,0);
+        Assertions.assertEquals(Peer.pickNewPieceToRequest(peers, self, requested), 4);
+        peers[4] = false;
+        Assertions.assertEquals(Peer.pickNewPieceToRequest(peers, self, requested), -1);
+        requested.remove(3);
+        Assertions.assertEquals(Peer.pickNewPieceToRequest(peers, self, requested), 0);
+        peers[0] = false;
+        Assertions.assertEquals(Peer.pickNewPieceToRequest(peers, self, requested), -1);
+    }
 }
