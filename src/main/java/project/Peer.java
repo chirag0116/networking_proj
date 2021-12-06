@@ -345,6 +345,7 @@ public class Peer {
         }
         else if (msg instanceof HaveMessage) {
             HaveMessage m = (HaveMessage) msg;
+            response = handleHaveMessage(m);
         }
         else if (msg instanceof BitfieldMessage) {
             BitfieldMessage m = (BitfieldMessage) msg;
@@ -407,7 +408,16 @@ public class Peer {
 
         // should send a request message, check for what piece the sender can give the received (self)
         return new RequestMessage(pickNewPieceToRequest(senderId), msg.getPeer());
-        // sends to the highest fed data givers among interested (don't know what standard to set)
+    }
+
+    private Message handleHaveMessage(HaveMessage msg) {
+        Integer senderId = msg.getPeer().getId();
+        bitfields.get(senderId)[msg.getIndex()] = true;
+
+        if (!bitfields.get(self.getId())[msg.getIndex()])
+            return new InterestedMessage(msg.getPeer());
+        else
+            return new UninterestedMessage(msg.getPeer());
     }
 
     private Message handleRequestMessage(RequestMessage msg) {
