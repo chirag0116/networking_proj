@@ -120,4 +120,33 @@ public class PeerTests {
         Assertions.assertFalse(result.get(3));
         Assertions.assertFalse(result.get(4));
     }
+
+    // Run this from project_config_file_small/project_config_file_small working directory
+    @Test
+    void testHandleBitfieldMessage() {
+        boolean[] senderBitfield = {true, false};
+        PeerConfiguration sender = new PeerConfiguration(1,"foo",1,false);
+        BitfieldMessage msg = new BitfieldMessage(senderBitfield, sender);
+
+        boolean[] self1 = {false,false};
+        boolean[] self2 = {false,true};
+        boolean[] self3 = {true,false};
+        boolean[] self4 = {true,true};
+
+        Message response = Peer.handleBitfieldMessage(msg, senderBitfield, self1);
+        Assertions.assertTrue(response instanceof InterestedMessage);
+        Assertions.assertEquals(response.getPeer(), sender);
+
+        response = Peer.handleBitfieldMessage(msg, senderBitfield, self2);
+        Assertions.assertTrue(response instanceof InterestedMessage);
+        Assertions.assertEquals(response.getPeer(), sender);
+
+        response = Peer.handleBitfieldMessage(msg, senderBitfield, self3);
+        Assertions.assertTrue(response instanceof UninterestedMessage);
+        Assertions.assertEquals(response.getPeer(), sender);
+
+        response = Peer.handleBitfieldMessage(msg, senderBitfield, self4);
+        Assertions.assertTrue(response instanceof UninterestedMessage);
+        Assertions.assertEquals(response.getPeer(), sender);
+    }
 }

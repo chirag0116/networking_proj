@@ -298,9 +298,42 @@ public class Peer {
      * of actions based on message type.
      * @param msg - message to be handled
      */
-    private void handleMessage(Message msg) {
-        // TODO - Add message handling for each message type
-        throw new UnsupportedOperationException("handleMessage not yet implemented");
+    private void handleMessage(Message msg) throws UnsupportedOperationException {
+        Message response = null;
+        if (msg instanceof BitfieldMessage) {
+            BitfieldMessage m = (BitfieldMessage) msg;
+            response = handleBitfieldMessage(m);
+        }
+        else {
+            throw new UnsupportedOperationException("Unsupported message type");
+        }
+        servers.get(response.getPeer().getId()).sendMessage(response);
+    }
+
+    // Private function - updates internal data structure then calls static function
+    private Message handleBitfieldMessage(BitfieldMessage msg) {
+        Integer sender = msg.getPeer().getId();
+        // Save this bitfield to the internal data structure
+        for (int i = 0; i < bitfields.get(sender).length; i++) {
+            bitfields.get(sender)[i] = msg.hasPiece(i);
+        }
+        return handleBitfieldMessage(msg, bitfields.get(sender), bitfields.get(self.getId()));
+    }
+
+    // Static function - used to do non-side-effect operations
+    public static Message handleBitfieldMessage(BitfieldMessage msg, boolean[] senderBitfield, boolean[] selfBitfield) {
+        // Check for interest
+        boolean interested = false;
+        for (int i = 0; i < senderBitfield.length; i++) {
+            // Check if the sender has it, and we do not; use OR-EQUALS so that once interested is true, it stays true
+            interested |= senderBitfield[i] && !selfBitfield[i];
+        }
+        if (interested) {
+            return new InterestedMessage(msg.getPeer());
+        }
+        else {
+            return new UninterestedMessage(msg.getPeer());
+        }
     }
 
     // TODO -- Make this dump to file and print
