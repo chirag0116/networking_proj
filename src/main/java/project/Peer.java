@@ -473,6 +473,20 @@ public class Peer {
             try {
                 storePiece(msg.getPiece(), msg.getIndex());
                 pendingRequests.remove(msg.getPeer().getId(), msg.getIndex());
+                // Find peers who are rendered uninteresting
+                Set<Integer> wasInteresting = new HashSet<>();
+                for (PeerConfiguration peer : peers) {
+                    if (pickNewPieceToRequest(peer.getId()) != -1) {
+                        wasInteresting.add(peer.getId());
+                    }
+                }
+                bitfields.get(self.getId())[msg.getIndex()] = true;
+                for (PeerConfiguration peer : peers) {
+                    // Was interesting but not anymore
+                    if (wasInteresting.contains(peer.getId()) && pickNewPieceToRequest(peer.getId()) == -1) {
+                        servers.get(peer.getId()).sendMessage(new UninterestedMessage(peer));
+                    }
+                }
             }
             catch (IOException e) {
                 System.out.printf("Peer %d could not store piece %d due to IOException%n", self.getId(), msg.getIndex());
