@@ -422,9 +422,9 @@ public class Peer {
             public int compare(Integer o1, Integer o2) {
                 int score1 = scores.get(o1);
                 int score2 = scores.get(o2);
-                if (score1 > score2) {
+                if (score1 < score2) {
                     return 1;
-                } else if (score1 < score2) {
+                } else if (score1 > score2) {
                     return -1;
                 } else {
                     // Decide ties randomly, with equal probability
