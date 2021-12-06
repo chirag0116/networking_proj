@@ -217,7 +217,7 @@ public class Peer {
         Timer unchokeTimer = new Timer();
         unchokeTimer.schedule(DETERMINE_OPT_UNCHOKED_NEIGHBOR, 0, optimisticUnchoke * 1000L);
 
-        while (true) {
+        while (!isComplete()) {
             try {
                 // Blocks until a message is available
                 Message msg = this.messageQueue.take();
@@ -687,5 +687,28 @@ public class Peer {
             throw new IndexOutOfBoundsException("Invalid peer ID");
         }
         return preferred.get(peerId) || Objects.equals(optimisticallyUnchokedPeer.get(), peerId);
+    }
+
+    // Check the completion condition - whether all peers have file
+    private boolean isComplete() {
+        self.setHasFile(hasAllPieces(bitfields.get(self.getId())));
+        for (PeerConfiguration peer : peers) {
+            peer.setHasFile(hasAllPieces(bitfields.get(peer.getId())));
+        }
+        for (PeerConfiguration peer : peers) {
+            if (!peer.hasFile()) {
+                return false;
+            }
+        }
+        return self.hasFile();
+    }
+
+    public static boolean hasAllPieces(boolean[] bitfield) {
+        for (boolean b : bitfield) {
+            if (!b) {
+                return false;
+            }
+        }
+        return true;
     }
 }

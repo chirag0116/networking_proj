@@ -167,4 +167,14 @@ public class PeerTests {
         peers[0] = false;
         Assertions.assertEquals(Peer.pickNewPieceToRequest(peers, self, requested), -1);
     }
+
+    @Test
+    void testHasAllPieces() {
+        boolean[] bitfield = {false, false, false, false, false};
+        for(int i = 0; i < bitfield.length; i++) {
+            Assertions.assertFalse(Peer.hasAllPieces(bitfield));
+            bitfield[i] = true;
+        }
+        Assertions.assertTrue(Peer.hasAllPieces(bitfield));
+    }
 }
