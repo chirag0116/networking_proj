@@ -31,6 +31,7 @@ public class Server {
 
 
     private InHandler inputReader;
+    private MessageLogger sLog;
 
     /**
      * Constructor for the Server
@@ -53,6 +54,7 @@ public class Server {
         this.self = self;
         this.passiveStart = passiveStart;
         this.messageSink = messageSink;
+        sLog = new MessageLogger(self.getId());
     }
 
     /**
@@ -64,6 +66,10 @@ public class Server {
         boolean setupSuccess = setupConnection(); // sets up this.socket
         if (!setupSuccess) {
             return false; // Terminate and kill this thread
+        }
+        else {
+            //LOG -- proper TCP connection
+            sLog.logTCP(self.getId(), target.getId());
         }
 
         try {
