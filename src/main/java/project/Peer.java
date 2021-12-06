@@ -51,6 +51,10 @@ public class Peer {
     // key=peer's id, value=whether peer is preferred
     ConcurrentMap<Integer, Boolean> preferred;
 
+    // Stores whether a peer is currently interested in instance's data (received an InterestedMessage)
+    // key=peer's id, value=whether peer is interested
+    ConcurrentMap<Integer, Boolean> interested;
+
     // The peer who is optimistically unchoked right now; the integer stored is its id
     AtomicReference<Integer> optimisticallyUnchokedPeer;
 
@@ -85,7 +89,7 @@ public class Peer {
     private final TimerTask DETERMINE_OPT_UNCHOKED_NEIGHBOR = new TimerTask() {
         @Override
         public void run() {
-            int unchokeId = pickOptUnchokedNeighbor(peers, preferred);
+            int unchokeId = pickOptUnchokedNeighbor(peers, preferred, interested);
             optimisticallyUnchokedPeer.set(unchokeId);
             PeerConfiguration peer = getPeer(unchokeId);
             UnchokeMessage m = new UnchokeMessage(peer);
@@ -125,6 +129,7 @@ public class Peer {
 
         this.messageQueue = new LinkedBlockingQueue<>();
         this.servers = new ConcurrentHashMap<>(this.peers.size()); // initial capacity
+        this.interested = new ConcurrentHashMap<>(this.peers.size());
         this.preferred = new ConcurrentHashMap<>(numberPreferredNeighbors);
         this.optimisticallyUnchokedPeer = new AtomicReference<>();
         this.piecesReceivedInLastInterval = new ConcurrentHashMap<>(this.peers.size());
@@ -364,10 +369,14 @@ public class Peer {
      * static for testing
      * @return id of the neighbor to unchoke
      */
-    public static int pickOptUnchokedNeighbor(ArrayList<PeerConfiguration> peers, Map<Integer, Boolean> preferred) {
+    public static int pickOptUnchokedNeighbor(
+            ArrayList<PeerConfiguration> peers,
+            Map<Integer, Boolean> preferred,
+            Map<Integer, Boolean> interested
+    ) {
         ArrayList<PeerConfiguration> candidates = new ArrayList<>();
         for (PeerConfiguration peer : peers) {
-            if (!preferred.get(peer.getId())) {
+            if (!preferred.get(peer.getId()) && interested.get(peer.getId())) {
                 candidates.add(peer);
             }
         }
