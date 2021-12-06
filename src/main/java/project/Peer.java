@@ -84,6 +84,7 @@ public class Peer {
 
             // Send the choke and unchoke messages
             for (PeerConfiguration peer : peers) {
+                // TODO - BUG: Don't need to unchoke the optimistically unchoked neighbor, check for it
                 if (newPreferred.get(peer.getId()) && !preferred.get(peer.getId())) {
                     UnchokeMessage m = new UnchokeMessage(peer);
                     servers.get(peer.getId()).sendMessage(m);
