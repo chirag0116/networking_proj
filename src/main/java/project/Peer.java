@@ -63,12 +63,16 @@ public class Peer {
             ConcurrentMap<Integer,Boolean> newPreferred;
             if (!self.hasFile()) {
                 // Get the new preferred neighbors
-                newPreferred = computePreferredNeighbors(peers, piecesReceivedInLastInterval, numberPreferredNeighbors);
+                newPreferred = computePreferredNeighbors(
+                        peers,
+                        piecesReceivedInLastInterval,
+                        interested,
+                        numberPreferredNeighbors
+                );
             }
             else {
                 newPreferred = computePreferredNeighborsAltruistic(peers, interested, numberPreferredNeighbors);
             }
-
 
             // Send the choke and unchoke messages
             for (PeerConfiguration peer : peers) {
@@ -415,7 +419,8 @@ public class Peer {
      */
     public static ConcurrentMap<Integer, Boolean> computePreferredNeighbors(
             ArrayList<PeerConfiguration> peers,
-            ConcurrentMap<Integer, Integer> scores,
+            Map<Integer, Integer> scores,
+            Map<Integer, Boolean> interested,
             int numberNeighbors
     ) {
         // TODO - BUG: This needs to only include peers who are interested in the result
@@ -439,9 +444,15 @@ public class Peer {
             }
         });
         ConcurrentMap<Integer, Boolean> result = new ConcurrentHashMap<>();
-        for (int i = 0; i < sortedPeers.size(); i++) {
-            // id -> true if it is the K first elements, where k = numberNeighbors
-            result.put(sortedPeers.get(i), (i < numberNeighbors));
+        int count = 0;
+        for (Integer peer : sortedPeers) {
+            if (count < numberNeighbors && interested.get(peer)) {
+                result.put(peer, true);
+                count++;
+            }
+            else {
+                result.put(peer, false);
+            }
         }
         return result;
     }

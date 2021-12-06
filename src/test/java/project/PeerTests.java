@@ -38,36 +38,49 @@ public class PeerTests {
             new PeerConfiguration(1,"foo",8000,false),
             new PeerConfiguration(2,"foo",8000,false),
             new PeerConfiguration(3,"foo",8000,false),
-            new PeerConfiguration(4,"foo",8000,false)
+            new PeerConfiguration(4,"foo",8000,false),
+            new PeerConfiguration(5,"foo",8000,false)
         ));
         ConcurrentMap<Integer, Integer> scores = new ConcurrentHashMap<>();
         scores.put(1,10);
         scores.put(2,5);
         scores.put(3,0);
         scores.put(4,5);
+        scores.put(5,25);
 
-        ConcurrentMap<Integer,Boolean> result = Peer.computePreferredNeighbors(peers, scores, 1);
+        ConcurrentMap<Integer, Boolean> interested = new ConcurrentHashMap<>();
+        interested.put(1,true);
+        interested.put(2,true);
+        interested.put(3,false);
+        interested.put(4,true);
+        interested.put(5,false);
+
+        ConcurrentMap<Integer,Boolean> result = Peer.computePreferredNeighbors(peers, scores, interested, 1);
         Assertions.assertTrue(result.get(1));
         Assertions.assertFalse(result.get(2));
         Assertions.assertFalse(result.get(3));
         Assertions.assertFalse(result.get(4));
+        Assertions.assertFalse(result.get(5));
 
-        result = Peer.computePreferredNeighbors(peers, scores, 2);
+        result = Peer.computePreferredNeighbors(peers, scores, interested, 2);
         Assertions.assertTrue(result.get(1));
         Assertions.assertTrue(result.get(2) ^ result.get(4));
         Assertions.assertFalse(result.get(3));
+        Assertions.assertFalse(result.get(5));
 
-        result = Peer.computePreferredNeighbors(peers, scores, 3);
+        result = Peer.computePreferredNeighbors(peers, scores, interested, 3);
         Assertions.assertTrue(result.get(1));
         Assertions.assertTrue(result.get(2));
         Assertions.assertFalse(result.get(3));
         Assertions.assertTrue(result.get(4));
+        Assertions.assertFalse(result.get(5));
 
-        result = Peer.computePreferredNeighbors(peers, scores, 4);
+        result = Peer.computePreferredNeighbors(peers, scores, interested, 4);
         Assertions.assertTrue(result.get(1));
         Assertions.assertTrue(result.get(2));
-        Assertions.assertTrue(result.get(3));
+        Assertions.assertFalse(result.get(3));
         Assertions.assertTrue(result.get(4));
+        Assertions.assertFalse(result.get(5));
     }
 
     @Test
