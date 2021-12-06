@@ -30,6 +30,9 @@ public class Peer {
     // File object for I/O from the file; not initialized until startUp() finishes
     RandomAccessFile f;
 
+    //Message Logger
+    MessageLogger mLog;
+
     // Peers of the current peer
     private ArrayList<PeerConfiguration> peers;
 
@@ -168,6 +171,7 @@ public class Peer {
             Arrays.fill(bitfield, p.hasFile());
             this.bitfields.put(p.getId(), bitfield);
         }
+        mLog = new MessageLogger(self.getId());
 
     }
 
