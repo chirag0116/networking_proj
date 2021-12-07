@@ -177,4 +177,12 @@ public class PeerTests {
         }
         Assertions.assertTrue(Peer.hasAllPieces(bitfield));
     }
+
+    @Test
+    void testLoggerTimeStamp() {
+        String s = MessageLogger.getTimeStampString();
+        System.out.println(s);
+        Assertions.assertNotNull(s);
+        Assertions.assertTrue(s.length() > 0);
+    }
 }
