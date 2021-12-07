@@ -82,7 +82,7 @@ public class MessageFactory {
                 }
                 break;
             default:
-                throw new IllegalArgumentException("Unexpected message type in raw message");
+                throw new IllegalArgumentException(String.format("Unexpected message type (%d) in raw message", type));
         }
         return msg;
     }
