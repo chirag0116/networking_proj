@@ -4,10 +4,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.UnknownHostException;
+import java.net.*;
 import java.nio.ByteBuffer;
 import java.util.function.Consumer;
 
@@ -54,6 +51,7 @@ public class Server {
         this.self = self;
         this.passiveStart = passiveStart;
         this.messageSink = messageSink;
+        this.socket = null;
         sLog = new MessageLogger(self.getId());
     }
 
@@ -67,7 +65,23 @@ public class Server {
         this.self = self;
         this.passiveStart = passiveStart;
         this.messageSink = messageSink;
+        this.socket = null;
         sLog = logger;
+    }
+
+    public Server(PeerConfiguration self,
+                  PeerConfiguration target,
+                  Socket socket,
+                  boolean passiveStart,
+                  MessageLogger logger,
+                  Consumer<Message> messageSink
+    ) {
+        this.self = self;
+        this.target = target;
+        this.socket = socket;
+        this.passiveStart = passiveStart;
+        this.sLog = logger;
+        this.messageSink = messageSink;
     }
 
     /**
@@ -76,13 +90,19 @@ public class Server {
      */
     public boolean start() {
         // Init Connections
-        boolean setupSuccess = setupConnection(); // sets up this.socket
-        if (!setupSuccess) {
-            return false; // Terminate and kill this thread
+        if (!passiveStart) {
+            boolean setupSuccess = setupConnection(); // sets up this.socket
+            if (!setupSuccess) {
+                System.out.printf("Could not setup connection from self (%d) to target %d%n", self.getId(), target.getId());
+                return false; // Terminate and kill this thread
+            }
+            else {
+                //LOG -- proper TCP connection
+                sLog.logTCP(self.getId(), target.getId());
+            }
         }
         else {
-            //LOG -- proper TCP connection
-            sLog.logTCP(self.getId(), target.getId());
+            assert socket != null; // Should use the constructor to set it!
         }
 
         try {
@@ -95,6 +115,8 @@ public class Server {
         }
 
         if (!doHandshake()) {
+            System.out.printf("Could not successfully complete handshake from self (%d) to target %d%n",
+                    self.getId(), target.getId());
             return false; // Terminate and kill this thread
         }
 
@@ -139,18 +161,18 @@ public class Server {
         public void run() {
             try {
                 while (!this.isInterrupted()) {
-                    String rawMessage = (String) in.readObject();
-//                    byte[] b = {0,0,0,0};
-//                    if (in.read(b) == -1) {
-//                        break;
-//                    }
-//                    int len = ByteBuffer.wrap(b).getInt();
-//                    byte[] content = new byte[len+4];
-//                    System.arraycopy(b, 0, content, 0, 4);
-//                    if (in.read(content, 4, len) == -1) {
-//                        break;
-//                    }
-//                    String rawMessage = StringEncoder.bytesToString(content);
+                    //String rawMessage = (String) in.readObject();
+                    byte[] lenBytes = {0,0,0,0};
+                    if (in.read(lenBytes, 0, 4) == -1) {
+                        break;
+                    }
+                    int len = ByteBuffer.wrap(lenBytes).getInt();
+                    byte[] content = new byte[len];
+                    System.arraycopy(lenBytes, 0, content, 0, 4);
+                    if (in.read(content, 4, len-4) == -1) {
+                        break;
+                    }
+                    String rawMessage = StringEncoder.bytesToString(content);
                     messageSink.accept(MESSAGE_FACTORY.makeMessage(rawMessage, target));
                 }
             }
@@ -162,9 +184,9 @@ public class Server {
                 System.out.println("Server::InHandler::run IOException thrown. Stopping input from " + target);
                 e.printStackTrace();
             }
-            catch (ClassNotFoundException e) {
-                System.out.println("Server::InHandler::run ClassNotFoundException thrown. Stopping input from " + target);
-            }
+//            catch (ClassNotFoundException e) {
+//                System.out.println("Server::InHandler::run ClassNotFoundException thrown. Stopping input from " + target);
+//            }
             this.interrupt();
             /*
              * Do not close this.in because it is owned by Server
@@ -184,8 +206,8 @@ public class Server {
 
         public void run() {
             try {
-                //out.writeObject(StringEncoder.stringToBytes(message.serialize()));
-                out.writeObject(message.serialize());
+                //out.writeObject(message.serialize());
+                out.write(message.serializeToBytes());
                 out.flush();
             }
             catch (IOException e) {
@@ -222,14 +244,14 @@ public class Server {
      */
     private boolean setupConnection() {
         Socket conn = null;
-        if (passiveStart) {
-            conn = passiveConnect(self.getPort());
-        }
-        else {
+        if (!passiveStart) {
             InetAddress address = getTargetAddress();
             if (address != null) {
                 conn = activeConnect(address, target.getPort());
             }
+        }
+        else {
+            throw new UnsupportedOperationException("Do not call Server::setupConnection when in passive start mode");
         }
 
         if (conn == null) {
@@ -249,15 +271,19 @@ public class Server {
      * @param port -- the port for this server to listen on
      * @return a socket to the target, or null
      */
+    // WARNING - THIS IS NOW DEPRECATED
     public static Socket passiveConnect(int port) {
         Socket conn = null;
         try {
-            ServerSocket listener = new ServerSocket(port, BACKLOG_SIZE);
+            ServerSocket listener = new ServerSocket();
+            listener.setReuseAddress(true);
+            listener.bind(new InetSocketAddress(port), BACKLOG_SIZE);
             conn = listener.accept(); // Blocks until successful
         }
         catch (IOException e) {
-            System.out.println("Exception thrown while listening on" +
+            System.out.println("Exception thrown while listening on " +
                     port);
+            e.printStackTrace();
         }
         return conn;
     }
@@ -297,12 +323,14 @@ public class Server {
 
         // Check length of bytes is correct
         if (rawBytes.length < 32) {
+            System.out.printf("Bad handshake received from %d - bad length%n", target.getId());
             return false;
         }
 
         // Check header string is correct
         String header = raw.substring(0, 18);
         if (!header.equals(HANDSHAKE_HEADER)) {
+            System.out.printf("Bad handshake received from %d - bad header%n", target.getId());
             return false;
         }
 
@@ -312,6 +340,7 @@ public class Server {
             zero |= rawBytes[i];
         }
         if (zero != 0) {
+            System.out.printf("Bad handshake received from %d - bad zero bytes%n", target.getId());
             return false;
         }
 
@@ -320,12 +349,19 @@ public class Server {
         System.arraycopy(rawBytes, 28, idBytes, 0, 4);
         ByteBuffer buf = ByteBuffer.wrap(idBytes);
         int id = buf.getInt();
-        return id == target.getId();
+        if (id == target.getId()) {
+            return true;
+        }
+        else {
+            System.out.printf("Bad handshake received from %d - bad id of %d%n", target.getId(), id);
+            return false;
+        }
     }
 
     private boolean sendHandshake() {
         try {
-            out.writeObject(makeHandshakeMessage());
+            //out.writeObject(makeHandshakeMessage());
+            out.write(StringEncoder.stringToBytes(makeHandshakeMessage()));
             out.flush();
         }
         catch (IOException e) {
@@ -359,20 +395,34 @@ public class Server {
         try {
             if (passiveStart) {
                 // Receive then send
-                return validateHandshake((String)in.readObject()) && sendHandshake();
+                byte[] handshakeBytes = new byte[32];
+                if (in.read(handshakeBytes, 0, 32) == -1) {
+                    return false;
+                }
+                if (!validateHandshake(StringEncoder.bytesToString(handshakeBytes))) {
+                    return false;
+                }
+                return sendHandshake();
             }
             else {
                 // Send then receive
-                return sendHandshake() && validateHandshake((String)in.readObject());
+                if (!sendHandshake()) {
+                    return false;
+                }
+                byte[] handshakeBytes = new byte[32];
+                if (in.read(handshakeBytes, 0, 32) == -1) {
+                    return false;
+                }
+                return validateHandshake(StringEncoder.bytesToString(handshakeBytes));
             }
         }
         catch (IOException e) {
             System.out.println("IOException while reading handshake input with " + target);
             e.printStackTrace();
         }
-        catch (ClassNotFoundException e) {
-            System.out.println("Class not found exception while handshaking with " + target);
-        }
+//        catch (ClassNotFoundException e) {
+//            System.out.println("Class not found exception while handshaking with " + target);
+//        }
         return false;
     }
 }
