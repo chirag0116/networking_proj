@@ -112,11 +112,11 @@ public class Peer {
     private final TimerTask DETERMINE_OPT_UNCHOKED_NEIGHBOR = new TimerTask() {
         @Override
         public void run() {
-            int prevPeerId = optimisticallyUnchokedPeer.get();
+            Integer prevPeerId = optimisticallyUnchokedPeer.get();
             int unchokeId = pickOptUnchokedNeighbor(peers, preferred, interested, prevPeerId);
             optimisticallyUnchokedPeer.set(unchokeId);
             // Choke the old one, unless its preferred
-            if (!preferred.get(prevPeerId)) {
+            if (prevPeerId != -1 && !preferred.get(prevPeerId)) {
                 servers.get(prevPeerId).sendMessage(new ChokeMessage(getPeerWithId(prevPeerId)));
             }
             // Unchoke the new one
@@ -161,11 +161,12 @@ public class Peer {
         this.preferred = new ConcurrentHashMap<>(numberPreferredNeighbors);
         this.beingChokedBy = new HashSet<>();
         this.pendingRequests = new ConcurrentHashMap<>();
-        this.optimisticallyUnchokedPeer = new AtomicReference<>();
+        this.optimisticallyUnchokedPeer = new AtomicReference<>(-1); // Initially no one
         this.piecesReceivedInLastInterval = new ConcurrentHashMap<>(this.peers.size());
         for (PeerConfiguration peer : peers) {
             piecesReceivedInLastInterval.put(peer.getId(), 0);
             preferred.put(peer.getId(), false);
+            interested.put(peer.getId(), false); // Init everyone as uninterested
         }
 
         this.bitfields = new ConcurrentHashMap<>(this.peers.size() + 1); // initial capacity
@@ -616,7 +617,7 @@ public class Peer {
      * static for testing
      * @return id of the neighbor to unchoke
      */
-    public static int pickOptUnchokedNeighbor(
+    public static Integer pickOptUnchokedNeighbor(
             ArrayList<PeerConfiguration> peers,
             Map<Integer, Boolean> preferred,
             Map<Integer, Boolean> interested,
@@ -627,6 +628,9 @@ public class Peer {
             if (!preferred.get(peer.getId()) && interested.get(peer.getId()) && currentOptUnchokedNeighbor != peer.getId()) {
                 candidates.add(peer);
             }
+        }
+        if (candidates.isEmpty()) {
+            return -1;
         }
         Collections.shuffle(candidates);
         return candidates.get(0).getId();
