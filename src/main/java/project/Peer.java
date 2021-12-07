@@ -4,6 +4,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.text.ParseException;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
@@ -232,7 +235,7 @@ public class Peer {
             return; // Terminate
         }
         catch (IOException e) {
-            System.out.println("Issue setting up file - terminating");
+            System.out.println("Issue setting up peers - terminating");
             e.printStackTrace();
             return; // Terminate
         }
@@ -271,8 +274,18 @@ public class Peer {
      * construction
      */
     public void startUp() throws FileNotFoundException, IOException {
-        boolean[] selfBitfield = bitfields.get(self.getId());
+        List<PeerConfiguration> activeStart = new ArrayList<>();
+        List<PeerConfiguration> passiveStart = new LinkedList<>();
         for (PeerConfiguration peer : peers) {
+            if (peer.getId() > self.getId()) {
+                passiveStart.add(peer);
+            }
+            else {
+                activeStart.add(peer);
+            }
+        }
+
+        for (PeerConfiguration peer : activeStart) {
             Peer instance = this;
             Server server = new Server(self, peer, (peer.getId() > self.getId()), mLog, (Message m) -> {
                 instance.putMessage(m);
@@ -282,7 +295,7 @@ public class Peer {
             });
             servers.put(peer.getId(), server);
 
-            if (BLOCKING_SERVER_START) {
+            Thread serverLauncher = new Thread(() -> {
                 boolean success = servers.get(peer.getId()).start();
                 if (!success) {
                     // TODO - find a better way to handle this
@@ -292,28 +305,43 @@ public class Peer {
                     System.out.println("Server for neighbor " + peer + " started");
                     // Send bitfield to peer if this has the file
                     if (self.hasFile()) {
-                        BitfieldMessage m = new BitfieldMessage(selfBitfield, peer);
+                        BitfieldMessage m = new BitfieldMessage(bitfields.get(self.getId()), peer);
                         servers.get(peer.getId()).sendMessage(m);
                     }
                 }
+            });
+            serverLauncher.start();
+        }
+
+        ServerSocket listener = new ServerSocket(self.getPort());
+        while (!passiveStart.isEmpty()) {
+            Socket conn = listener.accept();
+            PeerConfiguration peer = passiveStart.get(0);
+            passiveStart.remove(0);
+            mLog.logTCP(self.getId(), peer.getId());
+
+            Peer instance = this;
+            Server server = new Server(self, peer, conn, (peer.getId() > self.getId()), mLog, (Message m) -> {
+                instance.putMessage(m);
+                synchronized (instance) {
+                    this.notify();
+                }
+            });
+            servers.put(peer.getId(), server);
+            passiveStart.remove(peer);
+
+            boolean success = servers.get(peer.getId()).start();
+            if (!success) {
+                // TODO - find a better way to handle this
+                System.out.println("Server for neighbor " + peer + " failed to start");
             }
             else {
-                Thread serverLauncher = new Thread(() -> {
-                    boolean success = servers.get(peer.getId()).start();
-                    if (!success) {
-                        // TODO - find a better way to handle this
-                        System.out.println("Server for neighbor " + peer + " failed to start");
-                    }
-                    else {
-                        System.out.println("Server for neighbor " + peer + " started");
-                        // Send bitfield to peer if this has the file
-                        if (self.hasFile()) {
-                            BitfieldMessage m = new BitfieldMessage(selfBitfield, peer);
-                            servers.get(peer.getId()).sendMessage(m);
-                        }
-                    }
-                });
-                serverLauncher.start();
+                System.out.println("Server for neighbor " + peer + " started");
+                // Send bitfield to peer if this has the file
+                if (self.hasFile()) {
+                    BitfieldMessage m = new BitfieldMessage(bitfields.get(self.getId()), peer);
+                    servers.get(peer.getId()).sendMessage(m);
+                }
             }
         }
     }
