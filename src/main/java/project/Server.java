@@ -57,6 +57,19 @@ public class Server {
         sLog = new MessageLogger(self.getId());
     }
 
+    public Server(PeerConfiguration self,
+                  PeerConfiguration target,
+                  boolean passiveStart,
+                  MessageLogger logger,
+                  Consumer<Message> messageSink
+    ) {
+        this.target = target;
+        this.self = self;
+        this.passiveStart = passiveStart;
+        this.messageSink = messageSink;
+        sLog = logger;
+    }
+
     /**
      * The start method which performs connection
      * setup and launches the input handling thread.

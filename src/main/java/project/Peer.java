@@ -270,7 +270,7 @@ public class Peer {
         boolean[] selfBitfield = bitfields.get(self.getId());
         for (PeerConfiguration peer : peers) {
             Peer instance = this;
-            Server server = new Server(self, peer, (peer.getId() > self.getId()), (Message m) -> {
+            Server server = new Server(self, peer, (peer.getId() > self.getId()), mLog, (Message m) -> {
                 instance.putMessage(m);
                 synchronized (instance) {
                     this.notify();
