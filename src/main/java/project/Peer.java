@@ -373,6 +373,7 @@ public class Peer {
         }
         else if (msg instanceof HaveMessage) {
             HaveMessage m = (HaveMessage) msg;
+            mLog.logHaveMessage(self.getId(), m.getPeer().getId(), m.getIndex());
             response = handleHaveMessage(m);
         }
         else if (msg instanceof BitfieldMessage) {

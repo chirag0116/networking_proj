@@ -81,5 +81,9 @@ public class MessageLogger {
     public void logNotInterested (int selfID, int notInterestedID) {
         writeMessage("Peer " + selfID + "received the ‘not interested’ message from" + notInterestedID);
     }
+
+    public void logHaveMessage(int selfID, int senderID, int pieceIndex) {
+        writeMessage("Peer " + selfID + " received the 'have' message from " + senderID + " for the piece " + pieceIndex);
+    }
 }
 
