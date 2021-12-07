@@ -112,17 +112,19 @@ public class Peer {
     private final TimerTask DETERMINE_OPT_UNCHOKED_NEIGHBOR = new TimerTask() {
         @Override
         public void run() {
-            int prevPeerId = optimisticallyUnchokedPeer.get();
+            Integer prevPeerId = optimisticallyUnchokedPeer.get();
             int unchokeId = pickOptUnchokedNeighbor(peers, preferred, interested, prevPeerId);
             optimisticallyUnchokedPeer.set(unchokeId);
-            // Choke the old one, unless its preferred
-            if (!preferred.get(prevPeerId)) {
-                servers.get(prevPeerId).sendMessage(new ChokeMessage(getPeerWithId(prevPeerId)));
+            if (unchokeId != -1) {
+                // Choke the old one, unless its preferred
+                if (prevPeerId != -1 && !preferred.get(prevPeerId)) {
+                    servers.get(prevPeerId).sendMessage(new ChokeMessage(getPeerWithId(prevPeerId)));
+                }
+                // Unchoke the new one
+                servers.get(unchokeId).sendMessage(new UnchokeMessage(getPeerWithId(unchokeId)));
+                //LOG -- optimistically unchoked neighbor
+                mLog.logOptimistic(self.getId(), unchokeId);
             }
-            // Unchoke the new one
-            servers.get(unchokeId).sendMessage(new UnchokeMessage(getPeerWithId(unchokeId)));
-            //LOG -- optimistically unchoked neighbor
-            mLog.logOptimistic(self.getId(), unchokeId);
         }
     };
 
@@ -161,11 +163,12 @@ public class Peer {
         this.preferred = new ConcurrentHashMap<>(numberPreferredNeighbors);
         this.beingChokedBy = new HashSet<>();
         this.pendingRequests = new ConcurrentHashMap<>();
-        this.optimisticallyUnchokedPeer = new AtomicReference<>();
+        this.optimisticallyUnchokedPeer = new AtomicReference<>(-1); // Initially no one
         this.piecesReceivedInLastInterval = new ConcurrentHashMap<>(this.peers.size());
         for (PeerConfiguration peer : peers) {
             piecesReceivedInLastInterval.put(peer.getId(), 0);
             preferred.put(peer.getId(), false);
+            interested.put(peer.getId(), false); // Init everyone as uninterested
         }
 
         this.bitfields = new ConcurrentHashMap<>(this.peers.size() + 1); // initial capacity
@@ -216,9 +219,9 @@ public class Peer {
 
         // Delays are 1000L to convert from seconds to milliseconds
         Timer preferredTimer = new Timer();
-        preferredTimer.schedule(DETERMINE_PREFERRED_NEIGHBORS, 0, unchoke * 1000L);
+        preferredTimer.schedule(DETERMINE_PREFERRED_NEIGHBORS, unchoke * 1000L, unchoke * 1000L);
         Timer unchokeTimer = new Timer();
-        unchokeTimer.schedule(DETERMINE_OPT_UNCHOKED_NEIGHBOR, 0, optimisticUnchoke * 1000L);
+        unchokeTimer.schedule(DETERMINE_OPT_UNCHOKED_NEIGHBOR, optimisticUnchoke * 1000L, optimisticUnchoke * 1000L);
 
         while (!isComplete()) {
             try {
@@ -270,7 +273,7 @@ public class Peer {
         boolean[] selfBitfield = bitfields.get(self.getId());
         for (PeerConfiguration peer : peers) {
             Peer instance = this;
-            Server server = new Server(self, peer, (peer.getId() > self.getId()), (Message m) -> {
+            Server server = new Server(self, peer, (peer.getId() > self.getId()), mLog, (Message m) -> {
                 instance.putMessage(m);
                 synchronized (instance) {
                     this.notify();
@@ -407,21 +410,31 @@ public class Peer {
 
     private Message handleUnchokeMessage(UnchokeMessage msg) {
         Integer senderId = msg.getPeer().getId();
-        if (beingChokedBy.contains(senderId))
-            beingChokedBy.remove(senderId);
+        beingChokedBy.remove(senderId);
 
         // should send a request message, check for what piece the sender can give the received (self)
-        return new RequestMessage(pickNewPieceToRequest(senderId), msg.getPeer());
+        Integer newPieceToRequest = pickNewPieceToRequest(senderId);
+        if (newPieceToRequest == -1) {
+            return new UninterestedMessage(msg.getPeer());
+        }
+        else {
+            return new RequestMessage(newPieceToRequest, msg.getPeer());
+        }
     }
 
     private Message handleHaveMessage(HaveMessage msg) {
         Integer senderId = msg.getPeer().getId();
         bitfields.get(senderId)[msg.getIndex()] = true;
 
-        if (!bitfields.get(self.getId())[msg.getIndex()])
+        if (!bitfields.get(self.getId())[msg.getIndex()]) {
             return new InterestedMessage(msg.getPeer());
-        else
+        }
+        else if (pickNewPieceToRequest(msg.getPeer().getId()) == -1){
             return new UninterestedMessage(msg.getPeer());
+        }
+        else {
+            return null;
+        }
     }
 
     private Message handleRequestMessage(RequestMessage msg) {
@@ -469,6 +482,22 @@ public class Peer {
             try {
                 storePiece(msg.getPiece(), msg.getIndex());
                 pendingRequests.remove(msg.getPeer().getId(), msg.getIndex());
+                // Find peers who are rendered uninteresting
+                Set<Integer> wasInteresting = new HashSet<>();
+                for (PeerConfiguration peer : peers) {
+                    if (pickNewPieceToRequest(peer.getId()) != -1) {
+                        wasInteresting.add(peer.getId());
+                    }
+                }
+                bitfields.get(self.getId())[msg.getIndex()] = true;
+                for (PeerConfiguration peer : peers) {
+                    // Tell everyone we have it
+                    servers.get(peer.getId()).sendMessage(new HaveMessage(msg.getIndex(), peer));
+                    // Tell them we are no longer interested, if applicable
+                    if (wasInteresting.contains(peer.getId()) && pickNewPieceToRequest(peer.getId()) == -1) {
+                        servers.get(peer.getId()).sendMessage(new UninterestedMessage(peer));
+                    }
+                }
             }
             catch (IOException e) {
                 System.out.printf("Peer %d could not store piece %d due to IOException%n", self.getId(), msg.getIndex());
@@ -591,7 +620,7 @@ public class Peer {
      * static for testing
      * @return id of the neighbor to unchoke
      */
-    public static int pickOptUnchokedNeighbor(
+    public static Integer pickOptUnchokedNeighbor(
             ArrayList<PeerConfiguration> peers,
             Map<Integer, Boolean> preferred,
             Map<Integer, Boolean> interested,
@@ -602,6 +631,9 @@ public class Peer {
             if (!preferred.get(peer.getId()) && interested.get(peer.getId()) && currentOptUnchokedNeighbor != peer.getId()) {
                 candidates.add(peer);
             }
+        }
+        if (candidates.isEmpty()) {
+            return -1;
         }
         Collections.shuffle(candidates);
         return candidates.get(0).getId();
