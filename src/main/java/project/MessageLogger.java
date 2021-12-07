@@ -109,8 +109,12 @@ public class MessageLogger {
                 count++;
             }
         }
-        writeMessage("Peer " + selfBitfield + " has downloaded the piece " + pieceIndex + " from " + peerId +
+        writeMessage("Peer " + selfId + " has downloaded the piece " + pieceIndex + " from " + peerId +
                 ". Now the number of pieces it has is " + count);
+    }
+
+    public void logComplete(int selfId) {
+        writeMessage("Peer " + selfId + "has downloaded the complete file");
     }
 }
 

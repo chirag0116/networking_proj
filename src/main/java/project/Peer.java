@@ -524,6 +524,10 @@ public class Peer {
                 // Write the log
                 mLog.logDownload(self.getId(), msg.getPeer().getId(), msg.getIndex(), bitfields.get(self.getId()));
 
+                if (hasAllPieces(bitfields.get(self.getId()))) {
+                    mLog.logComplete(self.getId());
+                }
+
                 // Send Have and newly Uninterested messages
                 for (PeerConfiguration peer : peers) {
                     // Tell everyone we have it
