@@ -84,8 +84,8 @@ public class Peer {
             else {
                 newPreferred = computePreferredNeighborsAltruistic(peers, interested, numberPreferredNeighbors);
                 //LOG -- new preferred neighbors
-                mLog.logChangeNeighbors(self.getId(), newPreferred);
             }
+            mLog.logChangeNeighbors(self.getId(), newPreferred);
 
             // Send the choke and unchoke messages
             for (PeerConfiguration peer : peers) {
