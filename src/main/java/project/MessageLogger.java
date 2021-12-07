@@ -34,5 +34,9 @@ public class MessageLogger {
     public void logOptimistic (int selfID, int unchokedID) {
         log.info("Peer " + selfID + " has the optimistically unchoked neighbor " + unchokedID + ".");
     }
+
+    public void logUnchoked (int selfID, int unchokedID) {
+        log.info("Peer " + selfID + " is unchoked by " + unchokedID + ".");
+    }
 }
 

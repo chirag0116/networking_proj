@@ -329,6 +329,7 @@ public class Peer {
         else if (msg instanceof UnchokeMessage) {
             UnchokeMessage m = (UnchokeMessage) msg;
             response = handleUnchokeMessage(m);
+            mLog.logUnchoked(self.getId() ,msg.getPeer().getId());
         }
         else if (msg instanceof InterestedMessage) {
             if (!interested.get(msg.getPeer().getId())) {
