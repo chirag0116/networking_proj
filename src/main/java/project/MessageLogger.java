@@ -16,7 +16,7 @@ public class MessageLogger {
     }
 
     public void logChangeNeighbors (int selfID, ConcurrentMap<Integer,Boolean> neighbors) {
-        String neighborList = null;
+        String neighborList = "";
         Boolean first = true;
         for (ConcurrentMap.Entry<Integer,Boolean> entry : neighbors.entrySet()) {
             if(!first) {
