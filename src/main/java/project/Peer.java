@@ -328,6 +328,7 @@ public class Peer {
         if (msg instanceof ChokeMessage) {
             ChokeMessage m = (ChokeMessage) msg;
             response = handleChokeMessage(m);
+            mLog.logChoked(self.getId() ,msg.getPeer().getId());
         }
         else if (msg instanceof UnchokeMessage) {
             UnchokeMessage m = (UnchokeMessage) msg;
@@ -337,6 +338,7 @@ public class Peer {
         else if (msg instanceof InterestedMessage) {
             if (!interested.get(msg.getPeer().getId())) {
                 interested.put(msg.getPeer().getId(), true);
+                mLog.logInterested(self.getId() ,msg.getPeer().getId());
             }
             else {
                 System.out.println("Peer is already interested");
@@ -345,6 +347,7 @@ public class Peer {
         else if (msg instanceof UninterestedMessage) {
             if (interested.get(msg.getPeer().getId())) {
                 interested.put(msg.getPeer().getId(), false);
+                mLog.logNotInterested(self.getId() ,msg.getPeer().getId());
             }
             else {
                 System.out.println("Peer is already not interested");
