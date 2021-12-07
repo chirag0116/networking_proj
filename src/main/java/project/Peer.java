@@ -111,6 +111,8 @@ public class Peer {
             for (PeerConfiguration peer : peers) {
                 piecesReceivedInLastInterval.put(peer.getId(), 0);
             }
+
+            preferred = newPreferred;
         }
     };
 
