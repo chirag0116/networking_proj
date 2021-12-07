@@ -14,6 +14,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class Peer {
 
+    private static final boolean BLOCKING_SERVER_START = false;
+
     // The network settings of this peer
     private PeerConfiguration self;
 
@@ -280,7 +282,7 @@ public class Peer {
             });
             servers.put(peer.getId(), server);
 
-            Thread serverLauncher = new Thread(() -> {
+            if (BLOCKING_SERVER_START) {
                 boolean success = servers.get(peer.getId()).start();
                 if (!success) {
                     // TODO - find a better way to handle this
@@ -294,8 +296,25 @@ public class Peer {
                         servers.get(peer.getId()).sendMessage(m);
                     }
                 }
-            });
-            serverLauncher.start();
+            }
+            else {
+                Thread serverLauncher = new Thread(() -> {
+                    boolean success = servers.get(peer.getId()).start();
+                    if (!success) {
+                        // TODO - find a better way to handle this
+                        System.out.println("Server for neighbor " + peer + " failed to start");
+                    }
+                    else {
+                        System.out.println("Server for neighbor " + peer + " started");
+                        // Send bitfield to peer if this has the file
+                        if (self.hasFile()) {
+                            BitfieldMessage m = new BitfieldMessage(selfBitfield, peer);
+                            servers.get(peer.getId()).sendMessage(m);
+                        }
+                    }
+                });
+                serverLauncher.start();
+            }
         }
     }
 
