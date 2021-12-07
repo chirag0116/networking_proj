@@ -26,6 +26,11 @@ public abstract class Message {
         return getLengthBytes() + getTypeBytes() + getPayloadBytes();
     }
 
+    // Get a byte array serialization
+    public byte[] serializeToBytes() {
+        return StringEncoder.stringToBytes(serialize());
+    }
+
     protected String getLengthBytes() {
         byte[] bytes = ByteBuffer.allocate(4).putInt(getLength()).array();
         return StringEncoder.bytesToString(bytes);
