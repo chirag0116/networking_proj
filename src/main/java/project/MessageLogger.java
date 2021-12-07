@@ -59,7 +59,7 @@ public class MessageLogger {
         }
 
         if (preferred.isEmpty()) {
-            writeMessage("Peer " + selfID + " has no preferred neighbors");
+            writeMessage("Peer " + selfID + " has no preferred neighbors.");
         }
         else {
             StringBuilder neighborList = new StringBuilder();
@@ -74,7 +74,7 @@ public class MessageLogger {
                 neighborList.append(id);
             }
 
-            writeMessage("Peer " + selfID + " has the preferred neighbors" + neighborList + ".");
+            writeMessage("Peer " + selfID + " has the preferred neighbors " + neighborList + ".");
         }
     }
 
