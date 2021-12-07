@@ -101,5 +101,16 @@ public class MessageLogger {
     public void logHaveMessage(int selfID, int senderID, int pieceIndex) {
         writeMessage("Peer " + selfID + " received the 'have' message from " + senderID + " for the piece " + pieceIndex);
     }
+
+    public void logDownload(int selfId, int peerId, int pieceIndex, boolean[] selfBitfield) {
+        int count = 0;
+        for (boolean hasPiece : selfBitfield) {
+            if (hasPiece) {
+                count++;
+            }
+        }
+        writeMessage("Peer " + selfBitfield + " has downloaded the piece " + pieceIndex + " from " + peerId +
+                ". Now the number of pieces it has is " + count);
+    }
 }
 

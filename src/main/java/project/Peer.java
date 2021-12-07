@@ -510,14 +510,21 @@ public class Peer {
             try {
                 storePiece(msg.getPiece(), msg.getIndex());
                 pendingRequests.remove(msg.getPeer().getId(), msg.getIndex());
-                // Find peers who are rendered uninteresting
+
+                // Find peers who were rendered uninteresting
                 Set<Integer> wasInteresting = new HashSet<>();
                 for (PeerConfiguration peer : peers) {
                     if (pickNewPieceToRequest(peer.getId()) != -1) {
                         wasInteresting.add(peer.getId());
                     }
                 }
+
                 bitfields.get(self.getId())[msg.getIndex()] = true;
+
+                // Write the log
+                mLog.logDownload(self.getId(), msg.getPeer().getId(), msg.getIndex(), bitfields.get(self.getId()));
+
+                // Send Have and newly Uninterested messages
                 for (PeerConfiguration peer : peers) {
                     // Tell everyone we have it
                     servers.get(peer.getId()).sendMessage(new HaveMessage(msg.getIndex(), peer));
