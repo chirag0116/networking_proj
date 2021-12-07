@@ -115,14 +115,16 @@ public class Peer {
             Integer prevPeerId = optimisticallyUnchokedPeer.get();
             int unchokeId = pickOptUnchokedNeighbor(peers, preferred, interested, prevPeerId);
             optimisticallyUnchokedPeer.set(unchokeId);
-            // Choke the old one, unless its preferred
-            if (prevPeerId != -1 && !preferred.get(prevPeerId)) {
-                servers.get(prevPeerId).sendMessage(new ChokeMessage(getPeerWithId(prevPeerId)));
+            if (unchokeId != -1) {
+                // Choke the old one, unless its preferred
+                if (prevPeerId != -1 && !preferred.get(prevPeerId)) {
+                    servers.get(prevPeerId).sendMessage(new ChokeMessage(getPeerWithId(prevPeerId)));
+                }
+                // Unchoke the new one
+                servers.get(unchokeId).sendMessage(new UnchokeMessage(getPeerWithId(unchokeId)));
+                //LOG -- optimistically unchoked neighbor
+                mLog.logOptimistic(self.getId(), unchokeId);
             }
-            // Unchoke the new one
-            servers.get(unchokeId).sendMessage(new UnchokeMessage(getPeerWithId(unchokeId)));
-            //LOG -- optimistically unchoked neighbor
-            mLog.logOptimistic(self.getId(), unchokeId);
         }
     };
 
@@ -217,9 +219,9 @@ public class Peer {
 
         // Delays are 1000L to convert from seconds to milliseconds
         Timer preferredTimer = new Timer();
-        preferredTimer.schedule(DETERMINE_PREFERRED_NEIGHBORS, 0, unchoke * 1000L);
+        preferredTimer.schedule(DETERMINE_PREFERRED_NEIGHBORS, unchoke * 1000L, unchoke * 1000L);
         Timer unchokeTimer = new Timer();
-        unchokeTimer.schedule(DETERMINE_OPT_UNCHOKED_NEIGHBOR, 0, optimisticUnchoke * 1000L);
+        unchokeTimer.schedule(DETERMINE_OPT_UNCHOKED_NEIGHBOR, optimisticUnchoke * 1000L, optimisticUnchoke * 1000L);
 
         while (!isComplete()) {
             try {
