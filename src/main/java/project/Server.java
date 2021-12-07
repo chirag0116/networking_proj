@@ -27,7 +27,7 @@ public class Server {
     private static final MessageFactory MESSAGE_FACTORY = new MessageFactory();
     private static final String HANDSHAKE_HEADER = "P2PFILESHARINGPROJ";
     // BLOCKING_MESSAGE_SEND determines whether calls to Server::sendMessage are blocking to the caller
-    private static final boolean BLOCKING_SEND_MESSAGE = true;
+    private static final boolean BLOCKING_SEND_MESSAGE = false;
 
 
     private InHandler inputReader;
