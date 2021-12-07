@@ -428,6 +428,9 @@ public class Peer {
         else if (pickNewPieceToRequest(msg.getPeer().getId()) == -1){
             return new UninterestedMessage(msg.getPeer());
         }
+        else {
+            return null;
+        }
     }
 
     private Message handleRequestMessage(RequestMessage msg) {
@@ -486,7 +489,7 @@ public class Peer {
                 for (PeerConfiguration peer : peers) {
                     // Tell everyone we have it
                     servers.get(peer.getId()).sendMessage(new HaveMessage(msg.getIndex(), peer));
-                    // Tell them we are not longer interested, if applicable
+                    // Tell them we are no longer interested, if applicable
                     if (wasInteresting.contains(peer.getId()) && pickNewPieceToRequest(peer.getId()) == -1) {
                         servers.get(peer.getId()).sendMessage(new UninterestedMessage(peer));
                     }
