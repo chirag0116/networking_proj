@@ -4,6 +4,9 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 import java.util.logging.Logger;
 
@@ -47,19 +50,32 @@ public class MessageLogger {
     }
 
     public void logChangeNeighbors (int selfID, ConcurrentMap<Integer,Boolean> neighbors) {
-        String neighborList = "";
-        Boolean first = true;
+        List<Integer> preferred = new LinkedList<>();
         for (ConcurrentMap.Entry<Integer,Boolean> entry : neighbors.entrySet()) {
-            if(!first) {
-                neighborList.concat(", ");
+            // If this peer is preferred
+            if (entry.getValue()) {
+                preferred.add(entry.getKey());
             }
-            else {
-                first = false;
-            }
-            neighborList.concat(entry.getKey().toString());
         }
 
-        writeMessage("Peer " + selfID + " has the preferred neighbors" + neighborList + ".");
+        if (preferred.isEmpty()) {
+            writeMessage("Peer " + selfID + " has no preferred neighbors");
+        }
+        else {
+            StringBuilder neighborList = new StringBuilder();
+            boolean first = true;
+            for (Integer id : preferred) {
+                if (first) {
+                    first = false;
+                }
+                else {
+                    neighborList.append(", ");
+                }
+                neighborList.append(id);
+            }
+
+            writeMessage("Peer " + selfID + " has the preferred neighbors" + neighborList + ".");
+        }
     }
 
     public void logOptimistic (int selfID, int unchokedID) {
