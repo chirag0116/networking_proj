@@ -439,6 +439,7 @@ public class Peer {
             return new UninterestedMessage(msg.getPeer());
         }
         else {
+            pendingRequests.put(senderId, newPieceToRequest);
             return new RequestMessage(newPieceToRequest, msg.getPeer());
         }
     }
@@ -539,6 +540,7 @@ public class Peer {
                 return new UninterestedMessage(msg.getPeer());
             }
             else {
+                pendingRequests.put(msg.getPeer().getId(), newPieceToRequest);
                 return new RequestMessage(newPieceToRequest, msg.getPeer());
             }
         }
