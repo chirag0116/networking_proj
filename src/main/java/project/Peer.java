@@ -179,6 +179,24 @@ public class Peer {
         }
         mLog = new MessageLogger(self.getId());
 
+        this.f = new RandomAccessFile(new File(getFilePath()), "rw");
+        if (!self.hasFile()) {
+            // Write zeros to the file
+            for (int i = 0; i < numberOfPieces(); i++) {
+                byte[] zeros;
+                if (i == numberOfPieces() - 1) {
+                    // Remaining bytes only for last piece
+                    zeros = new byte[filesize - i*piecesize];
+                }
+                else {
+                    zeros = new byte[piecesize];
+                }
+                Arrays.fill(zeros, (byte)0);
+
+                f.seek((long) i * piecesize);
+                f.write(zeros);
+            }
+        }
     }
 
     /**
@@ -251,25 +269,6 @@ public class Peer {
      * construction
      */
     public void startUp() throws FileNotFoundException, IOException {
-        this.f = new RandomAccessFile(new File(getFilePath()), "rw");
-        if (!self.hasFile()) {
-            // Write zeros to the file
-            for (int i = 0; i < numberOfPieces(); i++) {
-                byte[] zeros;
-                if (i == numberOfPieces() - 1) {
-                    // Remaining bytes only for last piece
-                    zeros = new byte[filesize - i*piecesize];
-                }
-                else {
-                    zeros = new byte[piecesize];
-                }
-                Arrays.fill(zeros, (byte)0);
-
-                f.seek((long) i * piecesize);
-                f.write(zeros);
-            }
-        }
-
         boolean[] selfBitfield = bitfields.get(self.getId());
         for (PeerConfiguration peer : peers) {
             Peer instance = this;
@@ -460,6 +459,11 @@ public class Peer {
         }
         else {
             byte[] piece = loadPiece(msg.getIndex());
+            if (piece == null) {
+                System.out.printf("Peer %d could not load piece %d to send to Peer %d; aborting PieceMessage%n",
+                        self.getId(), msg.getIndex(), msg.getPeer().getId());
+                return null;
+            }
             return new PieceMessage(msg.getIndex(), piece, msg.getPeer());
         }
     }
@@ -577,7 +581,7 @@ public class Peer {
      * @return the piece as array of bytes, or null if it could not be loaded
      * @throws IndexOutOfBoundsException if the index is too large or negative
      */
-    private byte[] loadPiece(int index) throws IndexOutOfBoundsException {
+    public byte[] loadPiece(int index) throws IndexOutOfBoundsException {
         if (index > numberOfPieces() || index < 0) {
             throw new IndexOutOfBoundsException("Invalid piece index");
         }
